@@ -61,6 +61,19 @@
 		3C83B280206317A7001D08CE /* BRCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C83B27F206317A7001D08CE /* BRCoreTests.swift */; };
 		3C83B282206317A7001D08CE /* libBRCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 755CD9D11DAA197C0075898E /* libBRCore.a */; };
 		3C83B28D20631837001D08CE /* test.c in Sources */ = {isa = PBXBuildFile; fileRef = 75DC783C1DAA05B500932D9A /* test.c */; };
+		5A54BDF721CD0F64006001C9 /* quark.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDDC21CD0F63006001C9 /* quark.c */; };
+		5A54BDF821CD0F64006001C9 /* keccak.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDDE21CD0F64006001C9 /* keccak.c */; };
+		5A54BDF921CD0F64006001C9 /* aes_helper.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDE021CD0F64006001C9 /* aes_helper.c */; };
+		5A54BDFA21CD0F64006001C9 /* simd.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDE321CD0F64006001C9 /* simd.c */; };
+		5A54BDFB21CD0F64006001C9 /* luffa.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDE421CD0F64006001C9 /* luffa.c */; };
+		5A54BDFC21CD0F64006001C9 /* blake.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDE521CD0F64006001C9 /* blake.c */; };
+		5A54BDFD21CD0F64006001C9 /* cubehash.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDEB21CD0F64006001C9 /* cubehash.c */; };
+		5A54BDFE21CD0F64006001C9 /* jh.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDEC21CD0F64006001C9 /* jh.c */; };
+		5A54BDFF21CD0F64006001C9 /* shavite.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDED21CD0F64006001C9 /* shavite.c */; };
+		5A54BE0021CD0F64006001C9 /* groestl.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDEE21CD0F64006001C9 /* groestl.c */; };
+		5A54BE0121CD0F64006001C9 /* bmw.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDEF21CD0F64006001C9 /* bmw.c */; };
+		5A54BE0221CD0F64006001C9 /* skein.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDF421CD0F64006001C9 /* skein.c */; };
+		5A54BE0321CD0F64006001C9 /* echo.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A54BDF521CD0F64006001C9 /* echo.c */; };
 		7503773D1DF57428005EB8AE /* WalletManager+Auth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7503773C1DF57428005EB8AE /* WalletManager+Auth.swift */; };
 		751734B91DAC941E00193C87 /* sec-sub-1.c in Sources */ = {isa = PBXBuildFile; fileRef = 755CD8BE1DAA16820075898E /* sec-sub-1.c */; };
 		752438751DAAC50800844BEC /* alloc.c in Sources */ = {isa = PBXBuildFile; fileRef = 755CD6761DAA0E400075898E /* alloc.c */; };
@@ -682,6 +695,32 @@
 		3C83B27F206317A7001D08CE /* BRCoreTests.swift */ = {isa = PBXFileReference; indentWidth = 4; lastKnownFileType = sourcecode.swift; path = BRCoreTests.swift; sourceTree = "<group>"; };
 		3C83B281206317A7001D08CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		3C83B2912063187C001D08CE /* BRCoreTests-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "BRCoreTests-Bridging-Header.h"; sourceTree = "<group>"; };
+		5A54BDDC21CD0F63006001C9 /* quark.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = quark.c; path = "../../../brd-mippl-ios/Modules/breadwallet-core/quark.c"; sourceTree = "<group>"; };
+		5A54BDDE21CD0F64006001C9 /* keccak.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = keccak.c; sourceTree = "<group>"; };
+		5A54BDDF21CD0F64006001C9 /* sph_bmw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_bmw.h; sourceTree = "<group>"; };
+		5A54BDE021CD0F64006001C9 /* aes_helper.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = aes_helper.c; sourceTree = "<group>"; };
+		5A54BDE121CD0F64006001C9 /* sph_cubehash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_cubehash.h; sourceTree = "<group>"; };
+		5A54BDE221CD0F64006001C9 /* sph_blake.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_blake.h; sourceTree = "<group>"; };
+		5A54BDE321CD0F64006001C9 /* simd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = simd.c; sourceTree = "<group>"; };
+		5A54BDE421CD0F64006001C9 /* luffa.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = luffa.c; sourceTree = "<group>"; };
+		5A54BDE521CD0F64006001C9 /* blake.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = blake.c; sourceTree = "<group>"; };
+		5A54BDE621CD0F64006001C9 /* sph_groestl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_groestl.h; sourceTree = "<group>"; };
+		5A54BDE721CD0F64006001C9 /* sph_shavite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_shavite.h; sourceTree = "<group>"; };
+		5A54BDE821CD0F64006001C9 /* sph_keccak.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_keccak.h; sourceTree = "<group>"; };
+		5A54BDE921CD0F64006001C9 /* sph_luffa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_luffa.h; sourceTree = "<group>"; };
+		5A54BDEA21CD0F64006001C9 /* sph_echo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_echo.h; sourceTree = "<group>"; };
+		5A54BDEB21CD0F64006001C9 /* cubehash.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cubehash.c; sourceTree = "<group>"; };
+		5A54BDEC21CD0F64006001C9 /* jh.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = jh.c; sourceTree = "<group>"; };
+		5A54BDED21CD0F64006001C9 /* shavite.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = shavite.c; sourceTree = "<group>"; };
+		5A54BDEE21CD0F64006001C9 /* groestl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = groestl.c; sourceTree = "<group>"; };
+		5A54BDEF21CD0F64006001C9 /* bmw.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bmw.c; sourceTree = "<group>"; };
+		5A54BDF021CD0F64006001C9 /* sph_simd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_simd.h; sourceTree = "<group>"; };
+		5A54BDF121CD0F64006001C9 /* sph_jh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_jh.h; sourceTree = "<group>"; };
+		5A54BDF221CD0F64006001C9 /* sph_skein.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_skein.h; sourceTree = "<group>"; };
+		5A54BDF321CD0F64006001C9 /* sph_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sph_types.h; sourceTree = "<group>"; };
+		5A54BDF421CD0F64006001C9 /* skein.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = skein.c; sourceTree = "<group>"; };
+		5A54BDF521CD0F64006001C9 /* echo.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = echo.c; sourceTree = "<group>"; };
+		5A54BDF621CD0F64006001C9 /* quark.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = quark.h; path = "../../../brd-mippl-ios/Modules/breadwallet-core/quark.h"; sourceTree = "<group>"; };
 		7503773C1DF57428005EB8AE /* WalletManager+Auth.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "WalletManager+Auth.swift"; sourceTree = "<group>"; };
 		7528D2971ECF655500925DBC /* PaymentProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PaymentProtocol.swift; path = src/PaymentProtocol.swift; sourceTree = "<group>"; };
 		752FB03B1DF8BE4B009086FB /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1877,6 +1916,38 @@
 			path = BRCoreTests;
 			sourceTree = "<group>";
 		};
+		5A54BDDD21CD0F64006001C9 /* sha3 */ = {
+			isa = PBXGroup;
+			children = (
+				5A54BDDE21CD0F64006001C9 /* keccak.c */,
+				5A54BDDF21CD0F64006001C9 /* sph_bmw.h */,
+				5A54BDE021CD0F64006001C9 /* aes_helper.c */,
+				5A54BDE121CD0F64006001C9 /* sph_cubehash.h */,
+				5A54BDE221CD0F64006001C9 /* sph_blake.h */,
+				5A54BDE321CD0F64006001C9 /* simd.c */,
+				5A54BDE421CD0F64006001C9 /* luffa.c */,
+				5A54BDE521CD0F64006001C9 /* blake.c */,
+				5A54BDE621CD0F64006001C9 /* sph_groestl.h */,
+				5A54BDE721CD0F64006001C9 /* sph_shavite.h */,
+				5A54BDE821CD0F64006001C9 /* sph_keccak.h */,
+				5A54BDE921CD0F64006001C9 /* sph_luffa.h */,
+				5A54BDEA21CD0F64006001C9 /* sph_echo.h */,
+				5A54BDEB21CD0F64006001C9 /* cubehash.c */,
+				5A54BDEC21CD0F64006001C9 /* jh.c */,
+				5A54BDED21CD0F64006001C9 /* shavite.c */,
+				5A54BDEE21CD0F64006001C9 /* groestl.c */,
+				5A54BDEF21CD0F64006001C9 /* bmw.c */,
+				5A54BDF021CD0F64006001C9 /* sph_simd.h */,
+				5A54BDF121CD0F64006001C9 /* sph_jh.h */,
+				5A54BDF221CD0F64006001C9 /* sph_skein.h */,
+				5A54BDF321CD0F64006001C9 /* sph_types.h */,
+				5A54BDF421CD0F64006001C9 /* skein.c */,
+				5A54BDF521CD0F64006001C9 /* echo.c */,
+			);
+			name = sha3;
+			path = "../../../brd-mippl-ios/Modules/breadwallet-core/sha3";
+			sourceTree = "<group>";
+		};
 		755CD3191DAA0A110075898E /* secp256k1 */ = {
 			isa = PBXGroup;
 			children = (
@@ -2805,6 +2876,9 @@
 		75DC77AB1DAA05B500932D9A /* breadwallet-core */ = {
 			isa = PBXGroup;
 			children = (
+				5A54BDDC21CD0F63006001C9 /* quark.c */,
+				5A54BDF621CD0F64006001C9 /* quark.h */,
+				5A54BDDD21CD0F64006001C9 /* sha3 */,
 				759B4BDB203E5A31002C68CA /* bcash */,
 				75DC77AE1DAA05B500932D9A /* BRAddress.c */,
 				75DC77AF1DAA05B500932D9A /* BRAddress.h */,
@@ -4007,9 +4081,11 @@
 				22A9A94A1DF61945000F0016 /* BRCameraPlugin.swift in Sources */,
 				CEA9178620C07FBB00F29B31 /* SyncingHeaderView.swift in Sources */,
 				CEC6AA3B1DEE4EB000EE5AFD /* CGRect+Additions.swift in Sources */,
+				5A54BE0121CD0F64006001C9 /* bmw.c in Sources */,
 				7C5AC8A6203B93D3001B221E /* TxListCell.swift in Sources */,
 				CE45C1FB1E74F89C002C3847 /* WalletInfo.swift in Sources */,
 				CEE659E71F65A936001FF29D /* RetryTimer.swift in Sources */,
+				5A54BDFC21CD0F64006001C9 /* blake.c in Sources */,
 				CE90571A1DFF18B2006BA848 /* ScanViewController.swift in Sources */,
 				7CBC6B302177D72600899AFB /* DelistedTokenView.swift in Sources */,
 				7CB2286F20A2286700105FFF /* BREthereum.swift in Sources */,
@@ -4029,6 +4105,7 @@
 				2218BD771E8F55430091D5E8 /* BRAPIClient+Assets.swift in Sources */,
 				2228734D1E916F7C0044BA15 /* BRAPIClient+Features.swift in Sources */,
 				22A9A94D1DF61945000F0016 /* BRHTTPFileMiddleware.swift in Sources */,
+				5A54BE0221CD0F64006001C9 /* skein.c in Sources */,
 				CE8644251F2C160200033129 /* ConfirmationViewController.swift in Sources */,
 				7CBA74E820227D1300FBBFA9 /* MenuCell.swift in Sources */,
 				CEE9A2E920AB4F9A00C5CF2F /* BRAPIClient+Metrics.swift in Sources */,
@@ -4053,6 +4130,7 @@
 				CEA362681E00EE320061FC0E /* CameraGuideView.swift in Sources */,
 				CE03EC741EF256AC0038E3A8 /* SimpleUTXO.swift in Sources */,
 				CEBF32F61DDCEAF900348FC6 /* TransactionsTableViewController.swift in Sources */,
+				5A54BE0321CD0F64006001C9 /* echo.c in Sources */,
 				CE124CFC1E68932C00DFA146 /* FeeUpdater.swift in Sources */,
 				CEE20C381EA5B4680086F724 /* Strings.swift in Sources */,
 				CE25BF8D1DF3B8A500BC67B6 /* InViewAlert.swift in Sources */,
@@ -4080,11 +4158,13 @@
 				CE3CDB9720D443CE007059F6 /* CutoutLabel.swift in Sources */,
 				CE92F9F41DED59E80046B516 /* UIView+AnimationAdditions.swift in Sources */,
 				CEEC70941E96A24F00EF788E /* DefaultCurrencyViewController.swift in Sources */,
+				5A54BDF821CD0F64006001C9 /* keccak.c in Sources */,
 				CEE6282A1EA98B6D001035AA /* DispatchQueue+Additions.swift in Sources */,
 				CE38D3F620756ABF00E01C2B /* BtcWalletManager.swift in Sources */,
 				CEC6AA3D1DEE687000EE5AFD /* RadialGradientView.swift in Sources */,
 				CEEC70921E95DA4400EF788E /* GradientSwitch.swift in Sources */,
 				CE0CD1591DBFBCF5004023DA /* ModalPresenter.swift in Sources */,
+				5A54BE0021CD0F64006001C9 /* groestl.c in Sources */,
 				CEE20C2F1EA3E5820086F724 /* BlinkingView.swift in Sources */,
 				CEC6AA441DEFCDE900EE5AFD /* ModalViewController.swift in Sources */,
 				CEEC70831E90C07C00EF788E /* MenuItem.swift in Sources */,
@@ -4168,6 +4248,7 @@
 				7CBD57912107FAFA0042C388 /* PairedWalletIndex.swift in Sources */,
 				CEEC708C1E95461A00EF788E /* AboutViewController.swift in Sources */,
 				CEEC708A1E945E3B00EF788E /* UnEditableTextView.swift in Sources */,
+				5A54BDF721CD0F64006001C9 /* quark.c in Sources */,
 				CE3645481E7B424D0079D0CF /* WhiteNumberPad.swift in Sources */,
 				CEAA9E991DC262800066731D /* ConfirmPaperPhraseViewController.swift in Sources */,
 				CE3840E81FD590BD00437C31 /* AssetListTableView.swift in Sources */,
@@ -4195,9 +4276,11 @@
 				CE20C9011DBBFFF800C8397A /* Actions.swift in Sources */,
 				CE20C9191DBE7B8200C8397A /* State.swift in Sources */,
 				CEEC70811E90C04700EF788E /* SeparatorCell.swift in Sources */,
+				5A54BDF921CD0F64006001C9 /* aes_helper.c in Sources */,
 				CE97710D216FF20F00B9F621 /* SegwitEnabledView.swift in Sources */,
 				CE20C8FE1DBB133A00C8397A /* SimpleRedux.swift in Sources */,
 				7C230E752037AD52002F0FF1 /* SyncingIndicator.swift in Sources */,
+				5A54BDFF21CD0F64006001C9 /* shavite.c in Sources */,
 				22122B721F0B8996000E9AB9 /* BRAPIClient+Events.swift in Sources */,
 				CE4B6C201E233C2C00CF935B /* UITableView+Additions.swift in Sources */,
 				CEEC70861E94397D00EF788E /* UserDefaults+Additions.swift in Sources */,
@@ -4208,6 +4291,7 @@
 				7CA3BC302006864C00517BF7 /* Currency.swift in Sources */,
 				CE3D4C571EF5D5740016B1C8 /* ReachabilityMonitor.swift in Sources */,
 				7CBA74E62022784D00FBBFA9 /* AssetListViewModel.swift in Sources */,
+				5A54BDFE21CD0F64006001C9 /* jh.c in Sources */,
 				7CA1C47420EC25B9002E9E68 /* QRCode.swift in Sources */,
 				CEC7E594200D7C830056F410 /* Sentry.swift in Sources */,
 				CEE218E021066BFF00399231 /* LinkWalletViewController.swift in Sources */,
@@ -4218,7 +4302,9 @@
 				CE25BF931DFDA7A600BC67B6 /* MessageUIPresenter.swift in Sources */,
 				CE20C90C1DBC59E600C8397A /* StartFlowPresenter.swift in Sources */,
 				CE20C8FC1DBB0F3A00C8397A /* UIColor+BRWAdditions.swift in Sources */,
+				5A54BDFA21CD0F64006001C9 /* simd.c in Sources */,
 				CEA3626A1E01150D0061FC0E /* CGContext+Additions.swift in Sources */,
+				5A54BDFD21CD0F64006001C9 /* cubehash.c in Sources */,
 				7C6ACCB41FEB34470028ABFA /* TxLabelCell.swift in Sources */,
 				7C40DE2D20E09207000E289D /* ToggleButton.swift in Sources */,
 				22A9A9541DF61945000F0016 /* BRReplicatedKVStore.swift in Sources */,
@@ -4237,6 +4323,7 @@
 				CEBF32F41DDCE12900348FC6 /* AccountFooterView.swift in Sources */,
 				CE9057181DFF0FA8006BA848 /* String+Additions.swift in Sources */,
 				CED341331EF5A5C00014912A /* InAppAlert.swift in Sources */,
+				5A54BDFB21CD0F64006001C9 /* luffa.c in Sources */,
 				CE47A8E01F7DA54000FF35BA /* UIScreen+Additions.swift in Sources */,
 				CE2A1C4E210B7BB7003E9B69 /* PigeonRequest.swift in Sources */,
 				7C35E714200AC2680064808F /* ERC20Transaction.swift in Sources */,
@@ -4873,6 +4960,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Internal";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = breadwallet/breadwallet.entitlements;
 				DEVELOPMENT_TEAM = 4R7S6N88W9;
@@ -4880,8 +4969,13 @@
 					"$(SRCROOT)/**",
 					"$(PROJECT_DIR)",
 				);
+				GCC_C_LANGUAGE_STANDARD = c11;
 				INFOPLIST_FILE = breadwallet/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Modules/breadwallet-core/sha3",
+				);
 				OTHER_SWIFT_FLAGS = "-DDebug";
 				PRODUCT_BUNDLE_IDENTIFIER = org.voisine.breadwallet;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -4895,6 +4989,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = breadwallet/breadwallet.entitlements;
 				DEVELOPMENT_TEAM = 4R7S6N88W9;
@@ -4906,8 +5002,13 @@
 					"$(SRCROOT)/**",
 					"$(PROJECT_DIR)",
 				);
+				GCC_C_LANGUAGE_STANDARD = c11;
 				INFOPLIST_FILE = breadwallet/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Modules/breadwallet-core/sha3",
+				);
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = org.voisine.breadwallet;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -5070,6 +5171,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Internal";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = breadwallet/breadwallet.entitlements;
 				DEVELOPMENT_TEAM = 4R7S6N88W9;
@@ -5081,8 +5184,13 @@
 					"$(SRCROOT)/**",
 					"$(PROJECT_DIR)",
 				);
+				GCC_C_LANGUAGE_STANDARD = c11;
 				INFOPLIST_FILE = breadwallet/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Modules/breadwallet-core/sha3",
+				);
 				OTHER_SWIFT_FLAGS = "-DTestflight -DTestnet";
 				PRODUCT_BUNDLE_IDENTIFIER = org.voisine.breadwallet;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -5380,6 +5488,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Internal";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = breadwallet/breadwallet.entitlements;
 				DEVELOPMENT_TEAM = 4R7S6N88W9;
@@ -5387,8 +5497,13 @@
 					"$(SRCROOT)/**",
 					"$(PROJECT_DIR)",
 				);
+				GCC_C_LANGUAGE_STANDARD = c11;
 				INFOPLIST_FILE = breadwallet/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Modules/breadwallet-core/sha3",
+				);
 				OTHER_SWIFT_FLAGS = "-DDebug -DScreenshots -DTestnet";
 				PRODUCT_BUNDLE_IDENTIFIER = org.voisine.breadwallet;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -5619,6 +5734,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Internal";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = breadwallet/breadwallet.entitlements;
 				DEVELOPMENT_TEAM = 4R7S6N88W9;
@@ -5626,8 +5743,13 @@
 					"$(SRCROOT)/**",
 					"$(PROJECT_DIR)",
 				);
+				GCC_C_LANGUAGE_STANDARD = c11;
 				INFOPLIST_FILE = breadwallet/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Modules/breadwallet-core/sha3",
+				);
 				OTHER_SWIFT_FLAGS = "-DDebug -DTestnet";
 				PRODUCT_BUNDLE_IDENTIFIER = org.voisine.breadwallet;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -5852,6 +5974,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Internal";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = breadwallet/breadwallet.entitlements;
 				DEVELOPMENT_TEAM = 4R7S6N88W9;
@@ -5863,8 +5987,13 @@
 					"$(SRCROOT)/**",
 					"$(PROJECT_DIR)",
 				);
+				GCC_C_LANGUAGE_STANDARD = c11;
 				INFOPLIST_FILE = breadwallet/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Modules/breadwallet-core/sha3",
+				);
 				OTHER_SWIFT_FLAGS = "-DTestflight";
 				PRODUCT_BUNDLE_IDENTIFIER = org.voisine.breadwallet;
 				PRODUCT_NAME = "$(TARGET_NAME)";

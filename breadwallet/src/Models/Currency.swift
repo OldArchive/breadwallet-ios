@@ -155,7 +155,7 @@ public struct Bitcoin: CurrencyDef {
         case satoshi = 0
         case bit = 2
         case millibitcoin = 5
-        case bitcoin = 8 // 1 Satoshi = 1e-8 BTC
+        case bitcoin = 6 // 1 Satoshi = 1e-8 BTC
     }
     
     public let name: String
