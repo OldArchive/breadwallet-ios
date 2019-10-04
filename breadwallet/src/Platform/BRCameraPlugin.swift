@@ -33,7 +33,7 @@ UINavigationControllerDelegate, CameraOverlayDelegate {
         //   - 404: Camera is not available on this device
         //   - 423: Multiple concurrent take_picture requests. Only one take_picture request may be in flight at once.
         //
-        router.get("/_camera/take_picture") { (request, match) -> BRHTTPResponse in
+        router.get("/_camera/take_picture") { (request, _) -> BRHTTPResponse in
             if self.response != nil {
                 print("[BRCameraPlugin] already taking a picture")
                 return BRHTTPResponse(request: request, code: 423)
@@ -56,7 +56,7 @@ UINavigationControllerDelegate, CameraOverlayDelegate {
                 picker.cameraCaptureMode = .photo
                 
                 // set overlay
-                if let overlay = request.query["overlay"] , overlay.count == 1 {
+                if let overlay = request.query["overlay"], overlay.count == 1 {
                     print(["BRCameraPlugin] overlay = \(overlay)"])
                     let screenBounds = UIScreen.main.bounds
                     if overlay[0] == "id" {
@@ -88,7 +88,7 @@ UINavigationControllerDelegate, CameraOverlayDelegate {
         //
         router.get("/_camera/picture/(id)") { (request, match) -> BRHTTPResponse in
             var id: String!
-            if let ids = match["id"] , ids.count == 1 {
+            if let ids = match["id"], ids.count == 1 {
                 id = ids[0]
             } else {
                 return BRHTTPResponse(request: request, code: 500)
@@ -96,9 +96,12 @@ UINavigationControllerDelegate, CameraOverlayDelegate {
             let resp = BRHTTPResponse(async: request)
             do {
                 // read img
-                var imgDat: [UInt8]
+                var imgDat: [UInt8] = []
                 if id == "test" {
-                    imgDat = [UInt8](try! Data(contentsOf: URL(string: "http://i.imgur.com/VG2UvcY.jpg")!))
+                    if let url = URL(string: "http://i.imgur.com/VG2UvcY.jpg"),
+                        let data = try? Data(contentsOf: url) {
+                        imgDat = [UInt8](data)
+                    }
                 } else {
                     imgDat = try self.readImage(id)
                 }
@@ -107,13 +110,13 @@ UINavigationControllerDelegate, CameraOverlayDelegate {
                     return BRHTTPResponse(request: request, code: 500)
                 }
                 let scaledImg = img.scaled(to: CGSize(width: 1000, height: 1000), scalingMode: .aspectFit)
-                guard let scaledImageDat = UIImageJPEGRepresentation(scaledImg, 0.7) else {
+                guard let scaledImageDat = scaledImg.jpegData(compressionQuality: 0.7) else {
                     return BRHTTPResponse(request: request, code: 500)
                 }
                 imgDat = [UInt8](scaledImageDat)
                 // return img to client
                 var contentType = "image/jpeg"
-                if let b64opt = request.query["base64"], b64opt.count > 0 {
+                if let b64opt = request.query["base64"], !b64opt.isEmpty {
                     contentType = "text/plain"
                     let b64 = "data:image/jpeg;base64," + Data(imgDat).base64EncodedString()
                     guard let b64encoded = b64.data(using: .utf8) else {
@@ -145,7 +148,8 @@ UINavigationControllerDelegate, CameraOverlayDelegate {
     }
     
     open func imagePickerController(_ picker: UIImagePickerController,
-                                    didFinishPickingMediaWithInfo info: [String : Any]) {
+                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+
         defer {
             DispatchQueue.main.async {
                 picker.dismiss(animated: true, completion: nil)
@@ -154,7 +158,7 @@ UINavigationControllerDelegate, CameraOverlayDelegate {
         guard let resp = self.response else {
             return
         }
-        guard var img = info[UIImagePickerControllerOriginalImage] as? UIImage else {
+        guard var img = info[UIImagePickerController.InfoKey.originalImage] as? UIImage else {
             print("[BRCameraPlugin] error picking image... original image doesnt exist. data: \(info)")
             resp.provide(500)
             response = nil
@@ -203,7 +207,7 @@ UINavigationControllerDelegate, CameraOverlayDelegate {
     }
     
     func writeImage(_ image: UIImage) throws -> String {
-        guard let dat = UIImageJPEGRepresentation(image, 0.5) else {
+        guard let dat = image.jpegData(compressionQuality: 0.5) else {
             throw ImageError.errorConvertingImage
         }
         let name = dat.sha256.base58
@@ -228,7 +232,7 @@ enum ImageError: Error {
     case couldntRead
 }
 
-protocol CameraOverlayDelegate {
+protocol CameraOverlayDelegate: class {
     func takePhoto()
     func cancelPhoto()
 }
@@ -238,7 +242,7 @@ protocol CameraOverlay {
 }
 
 class IDCameraOverlay: UIView, CameraOverlay {
-    var delegate: CameraOverlayDelegate?
+    weak var delegate: CameraOverlayDelegate?
     let takePhotoButton: UIButton
     let cancelButton: UIButton
     let overlayRect: CGRect
@@ -246,7 +250,7 @@ class IDCameraOverlay: UIView, CameraOverlay {
     override init(frame: CGRect) {
         overlayRect = CGRect(x: 0, y: 0, width: frame.width, height: frame.width * CGFloat(4.0/3.0))
         takePhotoButton = UIButton(type: .custom)
-        takePhotoButton.setImage(#imageLiteral(resourceName: "camera-btn"), for: UIControlState())
+        takePhotoButton.setImage(#imageLiteral(resourceName: "camera-btn"), for: UIControl.State())
         takePhotoButton.setImage(#imageLiteral(resourceName: "camera-btn-pressed"), for: .highlighted)
         takePhotoButton.frame = CGRect(x: 0, y: 0, width: 79, height: 79)
         takePhotoButton.center = CGPoint(
@@ -254,10 +258,10 @@ class IDCameraOverlay: UIView, CameraOverlay {
             y: overlayRect.maxX + (frame.height - overlayRect.maxX) * 0.75
         )
         cancelButton = UIButton(type: .custom)
-        cancelButton.setTitle(S.Button.cancel, for: UIControlState())
+        cancelButton.setTitle(S.Button.cancel, for: UIControl.State())
         cancelButton.frame = CGRect(x: 0, y: 0, width: 88, height: 44)
         cancelButton.center = CGPoint(x: takePhotoButton.center.x * 0.3, y: takePhotoButton.center.y)
-        cancelButton.setTitleColor(UIColor.white, for: UIControlState())
+        cancelButton.setTitleColor(UIColor.white, for: UIControl.State())
         super.init(frame: frame)
         takePhotoButton.addTarget(self, action: #selector(IDCameraOverlay.doTakePhoto(_:)),
                                   for: .touchUpInside)
@@ -301,12 +305,12 @@ class IDCameraOverlay: UIView, CameraOverlay {
         
         let str = S.CameraPlugin.centerInstruction as NSString
         
-        let style = NSParagraphStyle.default.mutableCopy() as! NSMutableParagraphStyle
+        let style = NSMutableParagraphStyle()
         style.alignment = .center
         let attr = [
-            NSAttributedStringKey.paragraphStyle: style,
-            NSAttributedStringKey.font: UIFont.boldSystemFont(ofSize: 17),
-            NSAttributedStringKey.foregroundColor: UIColor.white
+            NSAttributedString.Key.paragraphStyle: style,
+            NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 17),
+            NSAttributedString.Key.foregroundColor: UIColor.white
         ]
         
         str.draw(in: CGRect(x: 0, y: cutout.maxY + 14.0, width: rect.width, height: 22), withAttributes: attr)

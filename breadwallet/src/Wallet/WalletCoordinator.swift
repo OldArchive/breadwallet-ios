@@ -11,7 +11,7 @@ import UIKit
 
 /// Coordinates the sync state of all wallet managers to
 /// display the activity indicator and control backtround tasks
-class WalletCoordinator : Subscriber, Trackable {
+class WalletCoordinator: Subscriber, Trackable {
     
     // 24-hours until incremental rescan is reset
     private let incrementalRescanInterval: TimeInterval = (24*60*60)
@@ -31,10 +31,8 @@ class WalletCoordinator : Subscriber, Trackable {
 
         //Listen for sync state changes in all wallets
         Store.subscribe(self, selector: {
-            for (key, val) in $0.wallets {
-                if val.syncState != $1.wallets[key]?.syncState {
-                    return true
-                }
+            for (key, val) in $0.wallets where val.syncState != $1.wallets[key]?.syncState {
+                return true
             }
             return false
         }, callback: { [weak self] state in
@@ -68,12 +66,20 @@ class WalletCoordinator : Subscriber, Trackable {
         }
     }
     
-    private func initiateRescan(currency: CurrencyDef) {
+    private func initiateRescan(currency: Currency) {
         guard let peerManager = self.walletManagers[currency.code]?.peerManager else { return assertionFailure() }
         peerManager.connect()
         
+        // Rescans go deeper each time they are initiated within a 24-hour period.
+        //
+        // 1. Rescan goes from the last-sent tx.
+        // 2. Rescan from peer manager's last checkpoint.
+        // 3. Full rescan from block zero.
+        //
+        // Which type of rescan we perform is captured in `startingPoint`.
+        
         var startingPoint = RescanState.StartingPoint.lastSentTx
-        var blockHeight: UInt64? = nil
+        var blockHeight: UInt64?
         
         if let prevRescan = UserDefaults.rescanState(for: currency) {
             if abs(prevRescan.startTime.timeIntervalSinceNow) > incrementalRescanInterval {
@@ -92,7 +98,7 @@ class WalletCoordinator : Subscriber, Trackable {
                 startingPoint = startingPoint.next
             }
         }
-        
+                
         UserDefaults.setRescanState(for: currency, to: RescanState(startTime: Date(), startingPoint: startingPoint))
         
         // clear pending transactions
@@ -105,16 +111,41 @@ class WalletCoordinator : Subscriber, Trackable {
         switch startingPoint {
         case .lastSentTx:
             print("[\(currency.code)] initiating rescan from block #\(blockHeight!)")
-            peerManager.rescan(fromBlockHeight: UInt32(blockHeight!))
+            
+            let scanFromBlock = UInt32(blockHeight!)
+
+            // Reset the 'last sync'd block height' for the currency in question so that
+            // the sync progress can be calculated correctly when we start sync'ing
+            // from 'blockHeight,' which may be an earlier block. (see BtcWalletManager.updateProgress()).
+            UserDefaults.setLastSyncedBlockHeight(height: scanFromBlock, for: currency)
+            
+            peerManager.rescan(fromBlockHeight: scanFromBlock)
+            
+            // It's possible that the block we pass into rescan() will be newer than what
+            // the peer manager actually ends up using as its starting point. Make sure
+            // our last-sync'd-block reflects this otherwise our sync progress will be reported
+            // incorrectly.
+            let actualScanStartingBlock: UInt32 = peerManager.lastBlockHeight
+            if actualScanStartingBlock != scanFromBlock {
+                UserDefaults.setLastSyncedBlockHeight(height: actualScanStartingBlock, for: currency)
+            }
+            
         case .checkpoint:
             print("[\(currency.code)] initiating rescan from last checkpoint")
             peerManager.rescanFromLatestCheckpoint()
+            // Ensure sync progress calculated in BtcWalletManager.updateProgress() is based on
+            // the checkpoint chosen by the peer manager.
+            UserDefaults.setLastSyncedBlockHeight(height: peerManager.lastBlockHeight, for: currency)
+            
         case .walletCreation:
             print("[\(currency.code)] initiating rescan from earliestKeyTime")
             peerManager.rescanFull()
+            // Ensure sync progress calculated in BtcWalletManager.updateProgress() is based on
+            // the block from which it started the rescan.
+            UserDefaults.setLastSyncedBlockHeight(height: peerManager.lastBlockHeight, for: currency)
         }
     }
-
+    
     private func syncStateDidChange(state: State) {
         let allWalletsFinishedSyncing = state.wallets.values.filter { $0.syncState == .success}.count == state.wallets.values.count
         if allWalletsFinishedSyncing {

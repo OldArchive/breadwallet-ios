@@ -13,7 +13,7 @@ struct ERC20Transaction: EthLikeTransaction {
     
     // MARK: Transaction Properties
     
-    let currency: CurrencyDef
+    let currency: Currency
     let hash: String
     let status: TransactionStatus
     let direction: TransactionDirection
@@ -35,16 +35,20 @@ struct ERC20Transaction: EthLikeTransaction {
    
     // MARK: - Init
     
-    init(tx: EthereumTransaction, accountAddress: String, token: ERC20Token, kvStore: BRReplicatedKVStore?, rate: Rate?) {
+    init(tx: EthereumTransfer, accountAddress: String, token: ERC20Token, kvStore: BRReplicatedKVStore?, rate: Rate?) {
         self.currency = token
         
-        switch tx.confirmations {
-        case 0:
-            status = .pending
-        case 1..<6:
-            status = .confirmed
-        default:
-            status = .complete
+        if tx.errorStatus.isError {
+            status = .invalid
+        } else {
+            switch tx.confirmations {
+            case 0:
+                status = .pending
+            case 1..<6:
+                status = .confirmed
+            default:
+                status = .complete
+            }
         }
         
         if status == .pending && tx.blockTimestamp == 0 {

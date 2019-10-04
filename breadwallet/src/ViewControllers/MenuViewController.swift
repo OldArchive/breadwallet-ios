@@ -8,7 +8,10 @@
 
 import UIKit
 
-class MenuViewController : UITableViewController {
+class MenuViewController: UITableViewController {
+    
+    let standardItemHeight: CGFloat = 48.0
+    let subtitleItemHeight: CGFloat = 58.0
     
     init(items: [MenuItem], title: String, faqButton: UIButton? = nil) {
         self.items = items
@@ -23,11 +26,19 @@ class MenuViewController : UITableViewController {
     }
     private let faqButton: UIButton?
     
+    func reloadMenu() {
+        tableView.reloadData()
+    }
+
     override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        view.backgroundColor = Theme.primaryBackground
+        
         tableView.register(MenuCell.self, forCellReuseIdentifier: MenuCell.cellIdentifier)
         tableView.tableFooterView = UIView()
         tableView.separatorStyle = .none
-        tableView.backgroundColor = .darkBackground
+        tableView.backgroundColor = Theme.primaryBackground
         tableView.rowHeight = 48.0
         
         navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
@@ -62,6 +73,16 @@ class MenuViewController : UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
     }
 
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let item = items[indexPath.row]
+        
+        if let subTitle = item.subTitle, !subTitle.isEmpty {
+            return subtitleItemHeight
+        } else {
+            return standardItemHeight
+        }
+    }
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }

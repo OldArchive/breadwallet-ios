@@ -8,7 +8,7 @@
 
 import UIKit
 
-private class CallbackWrapper : NSObject, NSCopying {
+private class CallbackWrapper: NSObject, NSCopying {
 
     init(_ callback: @escaping () -> Void) {
         self.callback = callback
@@ -39,11 +39,11 @@ extension UIControl {
             objc_setAssociatedObject(self, &AssociatedKeys.didTapCallback, CallbackWrapper(newValue), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
-
+    
     @objc private func didTap() {
         tap?()
     }
-
+    
     var valueChanged: (() -> Void)? {
         get {
             guard let callbackWrapper = objc_getAssociatedObject(self, &AssociatedKeys.valueChangedCallback) as? CallbackWrapper else { return nil }

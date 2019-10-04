@@ -11,10 +11,10 @@ import XCTest
 import BRCore
 
 class FakeAuthenticator: WalletAuthenticator {
-    let secret: UInt256
+    var secret: UInt256
     let key: BRKey
     var userAccount: [AnyHashable: Any]? = nil
-    
+
     init() {
         var keyData = Data(count: 32)
         let count = keyData.count
@@ -33,16 +33,48 @@ class FakeAuthenticator: WalletAuthenticator {
             return k
         })
     }
-    
+
     var noWallet: Bool { return false }
-    
+
     var apiAuthKey: String? {
         var k = key
-        k.compressed = 1 
+        k.compressed = 1
         let pkLen = BRKeyPrivKey(&k, nil, 0)
         var pkData = Data(count: pkLen)
         BRKeyPrivKey(&k, pkData.withUnsafeMutableBytes({ $0 }), pkLen)
         return String(data: pkData, encoding: .utf8)
+    }
+
+    // not used
+    
+    var creationTime: TimeInterval { return C.bip39CreationTime }
+
+    var masterPubKey: BRMasterPubKey? { return nil }
+    var ethPubKey: BRKey? { return nil }
+
+    var pinLoginRequired: Bool { return false }
+    var pinLength: Int { assertionFailure(); return 0 }
+
+    var walletDisabledUntil: TimeInterval { return TimeInterval() }
+
+    func authenticate(withPin: String) -> Bool {
+        assertionFailure()
+        return false
+    }
+
+    func authenticate(withPhrase: String) -> Bool {
+        assertionFailure()
+        return false
+    }
+
+    func authenticate(withBiometricsPrompt: String, completion: @escaping (BiometricsResult) -> Void) {
+        assertionFailure()
+        completion(.failure)
+    }
+
+    func buildBitIdKey(url: String, index: Int) -> BRKey? {
+        assertionFailure()
+        return nil
     }
 }
 
@@ -68,9 +100,9 @@ class BRAPIClientTests: XCTestCase {
         let b = pubKey1.base58DecodedData()
         let b2 = b.base58
         XCTAssertEqual(pubKey1, b2) // sanity check on our base58 functions
-        let key = client.authKey!.publicKey.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> BRKey in
+        let key = client.authKey!.publicKey.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) -> BRKey in
             var k = BRKey()
-            BRKeySetPubKey(&k, ptr, client.authKey!.publicKey.count)
+            BRKeySetPubKey(&k, ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), client.authKey!.publicKey.count)
             return k
         }
         XCTAssertEqual(pubKey1, key.publicKey.base58) // the key decoded from our encoded key is the same

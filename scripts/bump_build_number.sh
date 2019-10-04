@@ -4,13 +4,13 @@
 
 show_usage() {
 echo
-echo "Usage: ${0##/*} [version]"
-echo "If version is specified it also sets this as the marketing version,"
-echo "otherwise just increments the build number by 2"
+echo "Usage: ${0##/*} [version] [build]"
+echo "If only version number specified, build number is reset to 1,"
+echo "and if none specified just increments the build number by 1"
 exit
 }
 
-# show usage if '-h' or  '--help' is the first argument or no argument is given
+# show usage if '-h' or  '--help' is the first argument
 case $1 in
 	"-h"|"--help") show_usage ;;
 esac
@@ -41,17 +41,24 @@ mainBundleShortVersionString=$("${plistBuddy}" -c "Print CFBundleShortVersionStr
 echo "Current project version is ${mainBundleShortVersionString} (${mainBundleVersion})"
 
 # Increment the build number
-mainBundleVersion=$((${mainBundleVersion} + 2))
+mainBundleVersion=$((${mainBundleVersion} + 1))
 
 # Set version number if specified
 if [ ! -z "$1" ]; then
     echo "Setting new version: ${1}"
     mainBundleShortVersionString=${1}
+    mainBundleVersion=1
+fi
+
+# Set build number if specified
+if [ ! -z "$2" ]; then
+	echo "Setting build number: ${2}"
+	mainBundleVersion=${2}
 fi
 
 for idx in ${!plists[*]}
 do
-    read -r thisPlist <<< "${plists[$idx]}"
+	read -r thisPlist <<< "${plists[$idx]}"
 	# Find out the current version
 	thisBundleVersion=$("${plistBuddy}" -c "Print CFBundleVersion" "${thisPlist}")
 	thisBundleShortVersionString=$("${plistBuddy}" -c "Print CFBundleShortVersionString" "${thisPlist}")

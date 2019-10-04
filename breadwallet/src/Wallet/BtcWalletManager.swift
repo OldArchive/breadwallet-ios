@@ -11,10 +11,14 @@ import BRCore
 import SystemConfiguration
 import UIKit
 
+enum BTCWalletManagerError: Error {
+    case invalidKey
+}
+
 // A WalletManger instance manages a single wallet, and that wallet's individual connection to the bitcoin network.
 // After instantiating a WalletManager object, call myWalletManager.peerManager.connect() to begin syncing.
-class BTCWalletManager : WalletManager, Subscriber {
-    let currency: CurrencyDef
+class BTCWalletManager: WalletManager, Subscriber {
+    let currency: Currency
     var masterPubKey = BRMasterPubKey()
     var earliestKeyTime: TimeInterval = 0
     var db: CoreDatabase?
@@ -23,13 +27,24 @@ class BTCWalletManager : WalletManager, Subscriber {
     private let progressUpdateInterval: TimeInterval = 0.5
     private let updateDebounceInterval: TimeInterval = 0.4
     private var progressTimer: Timer?
-    private var lastBlockHeightKey: String {
-        return "LastBlockHeightKey-\(currency.code)"
-    }
+    
+    let badTransactionChecker = BadTransactionChecker()
+ 
+    // Last block height allows us to display the progress from where the sync stopped
+    // during the previous app life cycle to the last block in the chain. e.g., if the previous
+    // sync successfully sync'd up to block 100,000 and the current sync is at block 200,000 out of 
+    // 300,000 total blocks the percent will show 50% (half way between 100,000 and 300,000).
+    //
+    // 'lastBlockHeight' is updated in syncStopped() if there is no error.
     private var lastBlockHeight: UInt32 {
-        set { UserDefaults.standard.set(newValue, forKey: lastBlockHeightKey) }
-        get { return UInt32(UserDefaults.standard.integer(forKey: lastBlockHeightKey)) }
+        set { 
+            UserDefaults.setLastSyncedBlockHeight(height: newValue, for: currency)
+        }
+        get { 
+            return UserDefaults.lastSyncedBlockHeight(for: currency)
+        }
     }
+    
     private var retryTimer: RetryTimer?
     private var updateTimer: Timer?
     var kvStore: BRReplicatedKVStore? {
@@ -46,7 +61,9 @@ class BTCWalletManager : WalletManager, Subscriber {
             self.wallet = BRWallet(transactions: txns, masterPubKey: self.masterPubKey, listener: self, currency: self.currency)
             if let wallet = self.wallet {
                 Store.perform(action: WalletChange(self.currency).setBalance(UInt256(wallet.balance)))
-                Store.perform(action: WalletChange(self.currency).set(self.currency.state!.mutate(receiveAddress: wallet.receiveAddress, legacyReceiveAddress: wallet.legacyReceiveAddress)))
+                Store.perform(action: WalletChange(self.currency)
+                    .set(self.currency.state!.mutate(receiveAddress: wallet.receiveAddress,
+                                                     legacyReceiveAddress: wallet.legacyReceiveAddress)))
             }
             callback(self.wallet != nil)
         }
@@ -59,7 +76,9 @@ class BTCWalletManager : WalletManager, Subscriber {
         self.wallet = BRWallet(transactions: transactions, masterPubKey: self.masterPubKey, listener: self, currency: self.currency)
         if let wallet = self.wallet {
             Store.perform(action: WalletChange(self.currency).setBalance(UInt256(wallet.balance)))
-            Store.perform(action: WalletChange(self.currency).set(self.currency.state!.mutate(receiveAddress: wallet.receiveAddress, legacyReceiveAddress: wallet.legacyReceiveAddress)))
+            Store.perform(action: WalletChange(self.currency)
+                .set(self.currency.state!.mutate(receiveAddress: wallet.receiveAddress,
+                                                 legacyReceiveAddress: wallet.legacyReceiveAddress)))
         }
     }
 
@@ -80,11 +99,11 @@ class BTCWalletManager : WalletManager, Subscriber {
         }
     }
 
-    init(currency: CurrencyDef, masterPubKey: BRMasterPubKey, earliestKeyTime: TimeInterval, dbPath: String? = nil) throws {
+    init(currency: Currency, masterPubKey: BRMasterPubKey, earliestKeyTime: TimeInterval, dbPath: String? = nil) throws {
+        guard masterPubKey != BRMasterPubKey() else { throw BTCWalletManagerError.invalidKey }
         self.currency = currency
         self.masterPubKey = masterPubKey
-        self.earliestKeyTime = earliestKeyTime
-        guard self.masterPubKey != BRMasterPubKey() else { return }
+        self.earliestKeyTime = TimeInterval.maximum(earliestKeyTime, C.bip39CreationTime)
         if let path = dbPath {
             self.db = CoreDatabase(dbPath: path)
         } else {
@@ -95,7 +114,7 @@ class BTCWalletManager : WalletManager, Subscriber {
 
     var isWatchOnly: Bool {
         let mpkData = Data(masterPubKey: masterPubKey)
-        return mpkData.count == 0
+        return mpkData.isEmpty
     }
     
     func listenForSegwitOptIn() {
@@ -108,21 +127,48 @@ class BTCWalletManager : WalletManager, Subscriber {
             }
         })
     }
+
+    var isConnected: Bool {
+        return peerManager?.connectionStatus != BRPeerStatusDisconnected
+    }
+
+    func connect() {
+        peerManager?.connect()
+    }
+
+    func disconnect() {
+        peerManager?.disconnect()
+    }
+
+    func resetForWipe() {
+        peerManager?.clearCallbacks()
+        peerManager?.disconnect()
+        wallet = nil
+        peerManager = nil
+        db?.close()
+        db?.delete()
+        db = nil
+        earliestKeyTime = 0
+    }
 }
 
-extension BTCWalletManager : BRPeerManagerListener, Trackable {
+extension BTCWalletManager: BRPeerManagerListener, Trackable {
 
     func syncStarted() {
         print("[\(currency.code)] sync started")
-        DispatchQueue.main.async() {
+        DispatchQueue.main.async {
             self.db?.setDBFileAttributes()
-            self.progressTimer = Timer.scheduledTimer(timeInterval: self.progressUpdateInterval, target: self, selector: #selector(self.updateProgress), userInfo: nil, repeats: true)
+            self.progressTimer = Timer.scheduledTimer(timeInterval: self.progressUpdateInterval,
+                                                      target: self,
+                                                      selector: #selector(self.updateProgress),
+                                                      userInfo: nil,
+                                                      repeats: true)
             Store.perform(action: WalletChange(self.currency).setSyncingState(.syncing))
         }
     }
 
     func syncStopped(_ error: BRPeerManagerError?) {
-        DispatchQueue.main.async() {
+        DispatchQueue.main.async {
             if UIApplication.shared.applicationState != .active {
                 DispatchQueue.walletQueue.async {
                     self.peerManager?.disconnect()
@@ -137,7 +183,7 @@ extension BTCWalletManager : BRPeerManagerListener, Trackable {
                 self.saveEvent("event.syncErrorMessage", attributes: ["message": "\(description) (\(errorCode))"])
                 if self.retryTimer == nil && self.networkIsReachable() {
                     self.retryTimer = RetryTimer()
-                    self.retryTimer?.callback = strongify(self) { myself in
+                    self.retryTimer?.callback = strongify(self) { _ in
                         Store.trigger(name: .retrySync(self.currency))
                     }
                     self.retryTimer?.start()
@@ -183,7 +229,8 @@ extension BTCWalletManager : BRPeerManagerListener, Trackable {
 
     @objc private func updateProgress() {
         DispatchQueue.walletQueue.async {
-            guard let progress = self.peerManager?.syncProgress(fromStartHeight: self.lastBlockHeight), let timestamp = self.peerManager?.lastBlockTimestamp else { return }
+            guard let progress = self.peerManager?.syncProgress(fromStartHeight: self.lastBlockHeight),
+                let timestamp = self.peerManager?.lastBlockTimestamp else { return }
             DispatchQueue.main.async {
                 Store.perform(action: WalletChange(self.currency).setProgress(progress: progress, timestamp: timestamp))
                 if let wallet = self.wallet {
@@ -194,7 +241,7 @@ extension BTCWalletManager : BRPeerManagerListener, Trackable {
     }
 }
 
-extension BTCWalletManager : BRWalletListener {
+extension BTCWalletManager: BRWalletListener {
     func balanceChanged(_ balance: UInt64) {
         DispatchQueue.main.async { [weak self] in
             guard let myself = self else { return }
@@ -227,11 +274,12 @@ extension BTCWalletManager : BRWalletListener {
     }
 
     private func checkForReceived(newBalance: UInt64) {
-        //TODO:ETH
         if let oldBalance = currency.state?.balance?.asUInt64 {
             if newBalance > oldBalance {
                 if let walletState = currency.state {
-                    Store.perform(action: WalletChange(currency).set(walletState.mutate(receiveAddress: wallet?.receiveAddress, legacyReceiveAddress: wallet?.legacyReceiveAddress)))
+                    Store.perform(action: WalletChange(currency)
+                        .set(walletState.mutate(receiveAddress: wallet?.receiveAddress,
+                                                legacyReceiveAddress: wallet?.legacyReceiveAddress)))
                     if currency.state?.syncState == .success {
                         showReceived(amount: newBalance - oldBalance)
                     }
@@ -274,7 +322,7 @@ extension BTCWalletManager : BRWalletListener {
             guard let currentRate = myself.currency.state?.currentRate else { return }
             let transactions = myself.makeTransactionViewModels(transactions: txRefs,
                                                                 rate: currentRate)
-            if transactions.count > 0 {
+            if !transactions.isEmpty {
                 DispatchQueue.main.async {
                     Store.perform(action: WalletChange(myself.currency).setTransactions(transactions))
                 }
@@ -283,7 +331,11 @@ extension BTCWalletManager : BRWalletListener {
     }
 
     func makeTransactionViewModels(transactions: [BRTxRef?], rate: Rate?) -> [Transaction] {
-        return transactions.compactMap{ $0 }.sorted {
+        // 'transactions' are retrieved from Core
+        //
+        // Map the these transactions to BtcTransaction objects, and log analytics for any
+        // bad transactions encountered.
+        let btcTransactions: [BtcTransaction] = transactions.compactMap { $0 }.sorted {
             if $0.pointee.timestamp == 0 {
                 return true
             } else if $1.pointee.timestamp == 0 {
@@ -294,5 +346,39 @@ extension BTCWalletManager : BRWalletListener {
             }.compactMap {
                 return BtcTransaction($0, walletManager: self, kvStore: kvStore, rate: rate)
         }
+        
+        // The transaction checker will only call us back with a non-empty list if it encounters new invalid transactions.
+        badTransactionChecker.checkTransactions(btcTransactions) { [unowned self] (badTransactions) in
+            guard !(badTransactions.isEmpty) else { return }
+            
+            Store.trigger(name: .automaticRescan(self.currency))
+            self.logAnalyticsEventsForBadBtcTransactions(badTransactions)
+        }
+        
+        return btcTransactions
     }
+    
+    private func logAnalyticsEventsForBadBtcTransactions(_  badTransactions: [Transaction]) {
+        let badTxs = badTransactions.enumerated()
+        
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            guard let self = `self` else { return }
+            for badTx in badTxs {
+                let event = "event.badBtcTxData"
+                let tx = badTx.element
+                
+                guard let btcTx = badTx.element as? BtcTransaction, let errorInfo = btcTx.errorInfo else {
+                    self.saveEvent(event, attributes: ["txHash": tx.hash])
+                    continue
+                }
+
+                self.saveEvent(event, attributes: ["txhash": tx.hash,
+                                                   "error": errorInfo.error.rawValue,
+                                                   "amtSent": String(describing: errorInfo.amountSent),
+                                                   "amtRcvd": String(describing: errorInfo.amountReceived),
+                                                   "fee": String(describing: errorInfo.fee)])
+            }
+        }
+    }
+    
 }

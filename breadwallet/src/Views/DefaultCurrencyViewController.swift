@@ -9,15 +9,14 @@
 import UIKit
 import BRCore
 
-class DefaultCurrencyViewController : UITableViewController, Subscriber, Trackable {
+class DefaultCurrencyViewController: UITableViewController, Subscriber, Trackable {
 
-    init(walletManager: BTCWalletManager) {
-        self.walletManager = walletManager
+    init() {
         self.rates = Currencies.btc.state?.rates.filter { $0.code != Currencies.btc.code } ?? [Rate]()
+        self.selectedCurrencyCode = Store.state.defaultCurrencyCode
         super.init(style: .plain)
     }
 
-    private let walletManager: BTCWalletManager
     private let cellIdentifier = "CellIdentifier"
     private var rates: [Rate] = [] {
         didSet {
@@ -25,10 +24,10 @@ class DefaultCurrencyViewController : UITableViewController, Subscriber, Trackab
             setExchangeRateLabel()
         }
     }
-    private var defaultCurrencyCode: String? = nil {
+    private var selectedCurrencyCode: String {
         didSet {
             //Grab index paths of new and old rows when the currency changes
-            let paths: [IndexPath] = rates.enumerated().filter { $0.1.code == defaultCurrencyCode || $0.1.code == oldValue } .map { IndexPath(row: $0.0, section: 0) }
+            let paths: [IndexPath] = rates.enumerated().filter { $0.1.code == selectedCurrencyCode || $0.1.code == oldValue } .map { IndexPath(row: $0.0, section: 0) }
             tableView.beginUpdates()
             tableView.reloadRows(at: paths, with: .automatic)
             tableView.endUpdates()
@@ -48,14 +47,12 @@ class DefaultCurrencyViewController : UITableViewController, Subscriber, Trackab
 
     override func viewDidLoad() {
         tableView.register(SeparatorCell.self, forCellReuseIdentifier: cellIdentifier)
-        Store.subscribe(self, selector: { $0.defaultCurrencyCode != $1.defaultCurrencyCode }, callback: {
-            self.defaultCurrencyCode = $0.defaultCurrencyCode
-        })
+        self.selectedCurrencyCode = Store.state.defaultCurrencyCode
         Store.subscribe(self, selector: { $0[Currencies.btc]?.maxDigits != $1[Currencies.btc]?.maxDigits }, callback: { _ in
             self.setExchangeRateLabel()
         })
 
-        tableView.sectionHeaderHeight = UITableViewAutomaticDimension
+        tableView.sectionHeaderHeight = UITableView.automaticDimension
         tableView.estimatedSectionHeaderHeight = 140.0
         tableView.separatorStyle = .none
         tableView.backgroundColor = .darkBackground
@@ -65,14 +62,19 @@ class DefaultCurrencyViewController : UITableViewController, Subscriber, Trackab
         titleLabel.sizeToFit()
         navigationItem.titleView = titleLabel
 
-        let faqButton = UIButton.buildFaqButton(articleId: ArticleIds.displayCurrency, currency: walletManager.currency)
+        let faqButton = UIButton.buildFaqButton(articleId: ArticleIds.displayCurrency, currency: Currencies.btc)
         faqButton.tintColor = .navigationTint
         navigationItem.rightBarButtonItems = [UIBarButtonItem.negativePadding, UIBarButtonItem(customView: faqButton)]
         bitcoinSwitch.tintColor = .navigationTint
     }
+    
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        Store.perform(action: DefaultCurrency.SetDefault(selectedCurrencyCode))
+    }
 
     private func setExchangeRateLabel() {
-        if let currentRate = rates.filter({ $0.code == defaultCurrencyCode }).first {
+        if let currentRate = rates.filter({ $0.code == selectedCurrencyCode }).first {
             let amount = Amount(amount: UInt256(C.satoshis), currency: Currencies.btc, rate: currentRate)
             rateLabel.textColor = .white
             rateLabel.text = "\(amount.tokenDescription) = \(amount.fiatDescription(forLocale: currentRate.locale))"
@@ -93,7 +95,7 @@ class DefaultCurrencyViewController : UITableViewController, Subscriber, Trackab
         cell.textLabel?.text = "\(rate.code) (\(rate.currencySymbol))"
         cell.textLabel?.font = UIFont.customBody(size: 14.0)
         cell.textLabel?.textColor = .white
-        if rate.code == defaultCurrencyCode {
+        if rate.code == selectedCurrencyCode {
             let check = UIImageView(image: #imageLiteral(resourceName: "CircleCheck").withRenderingMode(.alwaysTemplate))
             check.tintColor = .navigationTint
             cell.accessoryView = check
@@ -155,9 +157,8 @@ class DefaultCurrencyViewController : UITableViewController, Subscriber, Trackab
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let rate = rates[indexPath.row]
-        Store.perform(action: DefaultCurrency.setDefault(rate.code))
+        selectedCurrencyCode = rate.code
     }
-
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")

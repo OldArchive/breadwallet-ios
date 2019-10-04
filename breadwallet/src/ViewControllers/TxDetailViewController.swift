@@ -147,7 +147,7 @@ class TxDetailViewController: UIViewController, Subscriber {
         tableView.tableFooterView = UIView()
         tableView.separatorStyle = .none
         tableView.estimatedRowHeight = 45.0
-        tableView.rowHeight = UITableViewAutomaticDimension
+        tableView.rowHeight = UITableView.automaticDimension
         tableView.allowsSelection = false
         tableView.isScrollEnabled = false
         tableView.showsVerticalScrollIndicator = false
@@ -194,7 +194,7 @@ class TxDetailViewController: UIViewController, Subscriber {
                 self.containerHeightConstraint.constant = self.compactContainerHeight
             }
             self.view.layoutIfNeeded()
-        }) { _ in }
+        }, completion: { _ in })
     }
     
     @objc private func close() {
@@ -205,11 +205,11 @@ class TxDetailViewController: UIViewController, Subscriber {
     }
 }
 
-//MARK: - Keyboard Handler
+// MARK: - Keyboard Handler
 extension TxDetailViewController {
     fileprivate func registerForKeyboardNotifications() {
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notification:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notification:)), name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: UIResponder.keyboardWillHideNotification, object: nil)
     }
     
     @objc fileprivate func keyboardWillShow(notification: NSNotification) {
@@ -219,8 +219,8 @@ extension TxDetailViewController {
         if !isExpanded {
             onToggleDetails()
         }
-        if let keyboardHeight = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue.height {
-            tableView.contentInset = UIEdgeInsetsMake(0, 0, keyboardHeight, 0)
+        if let keyboardHeight = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue.height {
+            tableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: keyboardHeight, right: 0)
         }
     }
     
@@ -230,7 +230,7 @@ extension TxDetailViewController {
         }
         UIView.animate(withDuration: 0.2, animations: {
             // adding inset in keyboardWillShow is animated by itself but removing is not
-            self.tableView.contentInset = UIEdgeInsetsMake(0, 0, 0, 0)
+            self.tableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
         })
     }
 }

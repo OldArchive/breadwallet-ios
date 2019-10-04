@@ -27,9 +27,7 @@ import Foundation
 import UIKit
 import WebKit
 
-
-@available(iOS 8.0, *)
-@objc open class BRWebViewController : UIViewController, WKNavigationDelegate, BRWebSocketClient {
+open class BRWebViewController: UIViewController, WKNavigationDelegate, BRWebSocketClient {
     var wkProcessPool: WKProcessPool
     var webView: WKWebView?
     var bundleName: String
@@ -37,9 +35,9 @@ import WebKit
     var debugEndpoint: String?
     var mountPoint: String
     var walletManagers: [String: WalletManager]
-    var btcWalletManager: WalletManager? {
-        return walletManagers[Currencies.btc.code]
-    }
+    var walletAuthenticator: TransactionAuthenticator
+    
+    var didClose: (() -> Void)?
 
     // bonjour debug endpoint establishment - this will configure the debugEndpoint 
     // over bonjour if debugOverBonjour is set to true. this MUST be set to false 
@@ -62,7 +60,7 @@ import WebKit
     var webViewInfo: [String: Any] {
         return [
             "visible": didAppear,
-            "loaded": didLoad,
+            "loaded": didLoad
         ]
     }
     
@@ -71,12 +69,15 @@ import WebKit
     }
     
     private let messageUIPresenter = MessageUIPresenter()
+
+    private var notificationObservers = [String: NSObjectProtocol]()
     
-    init(bundleName: String, mountPoint: String = "/", walletManagers: [String: WalletManager]) {
+    init(bundleName: String, mountPoint: String = "/", walletAuthenticator: TransactionAuthenticator, walletManagers: [String: WalletManager]) {
         wkProcessPool = WKProcessPool()
         self.bundleName = bundleName
         self.mountPoint = mountPoint
         self.walletManagers = walletManagers
+        self.walletAuthenticator = walletAuthenticator
         super.init(nibName: nil, bundle: nil)
         if debugOverBonjour {
             setupBonjour()
@@ -88,6 +89,9 @@ import WebKit
     }
     
     deinit {
+        notificationObservers.values.forEach { observer in
+            NotificationCenter.default.removeObserver(observer)
+        }
         stopServer()
     }
     
@@ -108,34 +112,40 @@ import WebKit
         webView = WKWebView(frame: CGRect.zero, configuration: config)
         webView?.navigationDelegate = self
         webView?.backgroundColor = .darkBackground
+        webView?.isOpaque = false   // prevents white background flash before web content is rendered  
         webView?.alpha = 0.0
         _ = webView?.load(request)
-        webView?.autoresizingMask = [UIViewAutoresizing.flexibleHeight, UIViewAutoresizing.flexibleWidth]
-        if #available(iOS 11, *) {
-            webView?.scrollView.contentInsetAdjustmentBehavior = .never
-        }
+        webView?.autoresizingMask = [UIView.AutoresizingMask.flexibleHeight, UIView.AutoresizingMask.flexibleWidth]
+        webView?.scrollView.contentInsetAdjustmentBehavior = .never
         view.addSubview(webView!)
         
         let center = NotificationCenter.default
-        center.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: .main) { [weak self] (_) in
-            self?.didAppear = true
-            if let info = self?.webViewInfo {
-                self?.sendToAllSockets(data: info)
-            }
+        notificationObservers[UIApplication.didBecomeActiveNotification.rawValue] =
+            center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] (_) in
+                self?.didAppear = true
+                if let info = self?.webViewInfo {
+                    self?.sendToAllSockets(data: info)
+                }
         }
-        center.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: .main) { [weak self] (_) in
-            self?.didAppear = false
-            if let info = self?.webViewInfo {
-                self?.sendToAllSockets(data: info)
-            }
+        notificationObservers[UIApplication.willResignActiveNotification.rawValue] =
+            center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] (_) in
+                self?.didAppear = false
+                if let info = self?.webViewInfo {
+                    self?.sendToAllSockets(data: info)
+                }
         }
         self.messageUIPresenter.presenter = self
+    }
+    
+    override open var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
     }
     
     override open func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         edgesForExtendedLayout = .all
         self.beginDidLoadCountdown()
+        self.navigationController?.setNavigationBarHidden(true, animated: false)
     }
     
     override open func viewDidAppear(_ animated: Bool) {
@@ -163,7 +173,7 @@ import WebKit
                 let activity = BRActivityViewController(message: S.Webview.dismiss)
                 myself.present(activity, animated: true, completion: nil)
                 Backend.apiClient.updateBundles(completionHandler: { results in
-                    results.forEach({ message, err in
+                    results.forEach({ _, err in
                         if err != nil {
                             print("[BRWebViewController] error updating bundle: \(String(describing: err))")
                         }
@@ -176,6 +186,9 @@ import WebKit
                             Store.trigger(name: .showStatusBar)
                             self?.dismiss(animated: true) {
                                 self?.notifyUserOfLoadFailure()
+                                if let didClose = self?.didClose {
+                                    didClose()
+                                }
                             }
                         }
                     })
@@ -210,7 +223,14 @@ import WebKit
     
     fileprivate func closeNow() {
         Store.trigger(name: .showStatusBar)
-        dismiss(animated: true, completion: nil)
+        
+        let didClose = self.didClose
+        
+        dismiss(animated: true, completion: {
+            if let didClose = didClose {
+                didClose()
+            }
+        })
     }
     
     open func startServer() {
@@ -233,7 +253,7 @@ import WebKit
 
     func navigate(to: String) {
         let js = "window.location = '\(to)';"
-        webView?.evaluateJavaScript(js, completionHandler: { result, error in
+        webView?.evaluateJavaScript(js, completionHandler: { _, error in
             if let error = error {
                 print("WEBVIEW navigate to error: \(String(describing: error))")
             }
@@ -244,7 +264,7 @@ import WebKit
     // contains th string "webpack" and will set our debugEndpoint to whatever that 
     // resolves to. this allows us to debug bundles over the network without complicated setup
     fileprivate func setupBonjour() {
-        let _ = bonjourBrowser.findService("_http._tcp") { [weak self] (services) in
+        _ = bonjourBrowser.findService("_http._tcp") { [weak self] (services) in
             for svc in services {
                 if !svc.name.lowercased().contains("webpack") {
                     continue
@@ -277,7 +297,7 @@ import WebKit
         
         if let archive = AssetArchive(name: bundleName, apiClient: Backend.apiClient) {
             // basic file server for static assets
-            let fileMw = BRHTTPFileMiddleware(baseURL: archive.extractedUrl)
+            let fileMw = BRHTTPFileMiddleware(baseURL: archive.extractedUrl, debugURL: UserDefaults.platformDebugURL)
             server.prependMiddleware(middleware: fileMw)
             
             // middleware to always return index.html for any unknown GET request (facilitates window.history style SPAs)
@@ -299,7 +319,7 @@ import WebKit
         router.plugin(BRCameraPlugin(fromViewController: self))
         
         // wallet plugin provides access to the wallet
-        router.plugin(BRWalletPlugin(walletManagers: walletManagers))
+        router.plugin(BRWalletPlugin(walletAuthenticator: walletAuthenticator, walletManagers: walletManagers))
         
         // link plugin which allows opening links to other apps
         router.plugin(BRLinkPlugin(fromViewController: self))
@@ -308,7 +328,7 @@ import WebKit
         router.plugin(BRKVStorePlugin(client: Backend.apiClient))
         
         // GET /_close closes the browser modal
-        router.get("/_close") { [weak self] (request, match) -> BRHTTPResponse in
+        router.get("/_close") { [weak self] (request, _) -> BRHTTPResponse in
             DispatchQueue.main.async {
                 self?.closeNow()
             }
@@ -319,7 +339,7 @@ import WebKit
         // Status codes:
         //   - 200: Presented email UI
         //   - 400: No address param provided
-        router.get("_email") { [weak self] (request, match) -> BRHTTPResponse in
+        router.get("_email") { [weak self] (request, _) -> BRHTTPResponse in
             if let email = request.query["address"], email.count == 1 {
                 DispatchQueue.main.async {
                     self?.messageUIPresenter.presentMailCompose(emailAddress: email[0])
@@ -355,8 +375,9 @@ import WebKit
     
     // MARK: - navigation delegate
     
-    open func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
-                        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    open func webView(_ webView: WKWebView,
+                      decidePolicyFor navigationAction: WKNavigationAction,
+                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url, let host = url.host, let port = (url as NSURL).port {
             if host == server.listenAddress || port.int32Value == Int32(server.port) {
                 return decisionHandler(.allow)

@@ -16,11 +16,11 @@ extension LAContext {
     }
 
     static var isBiometricsAvailable: Bool {
-        var error: NSError? = nil
+        var error: NSError?
         if LAContext().canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
             return true
         } else {
-            if error?.code == LAError.touchIDNotAvailable.rawValue {
+            if error?.code == Int(kLAErrorBiometryNotAvailable) {
                 return false
             } else {
                 return true
@@ -34,18 +34,17 @@ extension LAContext {
     
     static func biometricType() -> BiometricType {
         let context = LAContext()
-        if #available(iOS 11, *) {
-            let _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
-            switch(context.biometryType) {
-            case .none:
-                return .none
-            case .touchID:
-                return .touch
-            case .faceID:
-                return .face
-            }
-        } else {
-            return context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) ? .touch : .none
+        _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        switch context.biometryType {
+        case .none:
+            return .none
+        case .touchID:
+            return .touch
+        case .faceID:
+            return .face
+        @unknown default:
+            assertionFailure("unknown biometry type")
+            return .none
         }
     }
     

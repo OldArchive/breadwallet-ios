@@ -20,6 +20,7 @@ class TxDetailDataSource: NSObject {
         case address
         case exchangeRate
         case blockHeight
+        case confirmations
         case transactionId
         case gasPrice
         case gasLimit
@@ -66,14 +67,15 @@ class TxDetailDataSource: NSObject {
         fields.append(.timestamp)
         fields.append(.address)
         
-        if viewModel.comment != nil      { fields.append(.memo) }
-        if viewModel.gasPrice != nil     { fields.append(.gasPrice) }
-        if viewModel.gasLimit != nil     { fields.append(.gasLimit) }
-        if viewModel.fee != nil          { fields.append(.fee) }
-        if viewModel.total != nil        { fields.append(.total) }
+        if viewModel.comment != nil { fields.append(.memo) }
+        if viewModel.gasPrice != nil { fields.append(.gasPrice) }
+        if viewModel.gasLimit != nil { fields.append(.gasLimit) }
+        if viewModel.fee != nil { fields.append(.fee) }
+        if viewModel.total != nil { fields.append(.total) }
         if viewModel.exchangeRate != nil { fields.append(.exchangeRate) }
         
         fields.append(.blockHeight)
+        fields.append(.confirmations)
         fields.append(.transactionId)
     }
     
@@ -103,6 +105,8 @@ class TxDetailDataSource: NSObject {
             return S.TransactionDetails.feeHeader
         case .total:
             return S.TransactionDetails.totalHeader
+        case .confirmations:
+            return S.TransactionDetails.confirmationsLabel
         default:
             return ""
         }
@@ -115,7 +119,7 @@ extension TxDetailDataSource: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return fields.count
     }
-    
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let field = fields[indexPath.row]
@@ -128,53 +132,56 @@ extension TxDetailDataSource: UITableViewDataSource {
 
         switch field {
         case .amount:
-            let amountCell = cell as! TxAmountCell
+            guard let amountCell = cell as? TxAmountCell else { return cell }
             amountCell.set(viewModel: viewModel)
     
         case .status:
-            let statusCell = cell as! TxStatusCell
+            guard let statusCell = cell as? TxStatusCell else { return cell }
             statusCell.set(txInfo: viewModel)
             
         case .memo:
-            let memoCell = cell as! TxMemoCell
+            guard let memoCell = cell as? TxMemoCell else { return cell }
             memoCell.set(viewModel: viewModel, tableView: tableView)
             
         case .timestamp:
-            let labelCell = cell as! TxLabelCell
+            guard let labelCell = cell as? TxLabelCell else { return cell }
             labelCell.titleLabel.attributedText = viewModel.timestampHeader
             labelCell.value = viewModel.longTimestamp
             
         case .address:
-            let addressCell = cell as! TxAddressCell
+            guard let addressCell = cell as? TxAddressCell else { return cell }
             addressCell.set(address: viewModel.displayAddress)
             
         case .exchangeRate:
-            let labelCell = cell as! TxLabelCell
+            guard let labelCell = cell as? TxLabelCell else { return cell }
             labelCell.value = viewModel.exchangeRate ?? ""
             
         case .blockHeight:
-            let labelCell = cell as! TxLabelCell
+            guard let labelCell = cell as? TxLabelCell else { return cell }
             labelCell.value = viewModel.blockHeight
             
         case .transactionId:
-            let addressCell = cell as! TxAddressCell
+            guard let addressCell = cell as? TxAddressCell else { return cell }
             addressCell.set(address: viewModel.transactionHash)
             
         case .gasPrice:
-            let labelCell = cell as! TxLabelCell
+            guard let labelCell = cell as? TxLabelCell else { return cell }
             labelCell.value = viewModel.gasPrice ?? ""
             
         case .gasLimit:
-            let labelCell = cell as! TxLabelCell
+            guard let labelCell = cell as? TxLabelCell else { return cell }
             labelCell.value = viewModel.gasLimit ?? ""
             
         case .fee:
-            let labelCell = cell as! TxLabelCell
+            guard let labelCell = cell as? TxLabelCell else { return cell }
             labelCell.value = viewModel.fee ?? ""
             
         case .total:
-            let labelCell = cell as! TxLabelCell
+            guard let labelCell = cell as? TxLabelCell else { return cell }
             labelCell.value = viewModel.total ?? ""
+        case .confirmations:
+            guard let labelCell = cell as? TxLabelCell else { return cell }
+            labelCell.value = viewModel.confirmations
         }
         
         return cell

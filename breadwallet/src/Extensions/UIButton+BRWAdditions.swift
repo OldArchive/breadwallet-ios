@@ -13,17 +13,17 @@ extension UIButton {
         let button = UIButton(type: .system)
         button.setTitle(title, for: .normal)
         button.setImage(image, for: .normal)
-        button.titleLabel?.font = UIFont.customMedium(size: 12.0)
+        button.titleLabel?.font = Theme.caption
         button.contentMode = .center
         button.imageView?.contentMode = .center
         if let imageSize = button.imageView?.image?.size,
             let font = button.titleLabel?.font {
             let spacing: CGFloat = C.padding[1]/2.0
-            let titleSize = NSString(string: title).size(withAttributes: [NSAttributedStringKey.font : font])
+            let titleSize = NSString(string: title).size(withAttributes: [NSAttributedString.Key.font: font])
 
             // These edge insets place the image vertically above the title label
-            button.titleEdgeInsets = UIEdgeInsetsMake(0.0, -imageSize.width, -(26.0 + spacing), 0.0)
-            button.imageEdgeInsets = UIEdgeInsetsMake(-(titleSize.height + spacing), 0.0, 0.0, -titleSize.width)
+            button.titleEdgeInsets = UIEdgeInsets(top: 0.0, left: -imageSize.width, bottom: -(26.0 + spacing), right: 0.0)
+            button.imageEdgeInsets = UIEdgeInsets(top: -(titleSize.height + spacing), left: 0.0, bottom: 0.0, right: -titleSize.width)
         }
         return button
     }
@@ -34,6 +34,7 @@ extension UIButton {
         button.titleLabel?.font = UIFont.customMedium(size: 16.0)
         button.backgroundColor = .red
         button.layer.cornerRadius = 5
+        button.layer.masksToBounds = true
         return button
     }
 
@@ -52,13 +53,20 @@ extension UIButton {
 
     static var close: UIButton {
         let accessibilityLabel = E.isScreenshots ? "Close" : S.AccessibilityLabels.close
-        return UIButton.icon(image: #imageLiteral(resourceName: "Close"), accessibilityLabel: accessibilityLabel)
+        return UIButton.icon(image: #imageLiteral(resourceName: "CloseModern"), accessibilityLabel: accessibilityLabel)
     }
 
-    static func buildFaqButton(articleId: String, currency: CurrencyDef? = nil) -> UIButton {
+    static var closeSmall: UIButton {
+        let accessibilityLabel = E.isScreenshots ? "Close" : S.AccessibilityLabels.close
+        return UIButton.icon(image: #imageLiteral(resourceName: "Close-X-small"), accessibilityLabel: accessibilityLabel)
+    }
+
+    static func buildFaqButton(articleId: String, currency: Currency? = nil, tapped: (() -> Void)? = nil) -> UIButton {
         let button = UIButton.icon(image: #imageLiteral(resourceName: "Faq"), accessibilityLabel: S.AccessibilityLabels.faq)
+        button.tintColor = .white
         button.tap = {
             Store.trigger(name: .presentFaq(articleId, currency))
+            tapped?()
         }
         return button
     }
@@ -69,9 +77,9 @@ extension UIButton {
         button.setImage(image, for: .normal)
 
         if image == #imageLiteral(resourceName: "Close") {
-            button.imageEdgeInsets = UIEdgeInsetsMake(14.0, 14.0, 14.0, 14.0)
+            button.imageEdgeInsets = UIEdgeInsets(top: 14.0, left: 14.0, bottom: 14.0, right: 14.0)
         } else {
-            button.imageEdgeInsets = UIEdgeInsetsMake(12.0, 12.0, 12.0, 12.0)
+            button.imageEdgeInsets = UIEdgeInsets(top: 12.0, left: 12.0, bottom: 12.0, right: 12.0)
         }
 
         button.tintColor = .darkText
@@ -93,5 +101,16 @@ extension UIButton {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: { [weak self] in
             self?.isEnabled = true
         })
+    }    
+}
+
+extension UIBarButtonItem {
+    
+    static func skipBarButtonItem() -> UIBarButtonItem {
+        let skip = UIBarButtonItem(title: S.Button.skip, style: .plain, target: nil, action: nil)
+        skip.tintColor = Theme.tertiaryText
+        skip.setTitleTextAttributes([NSAttributedString.Key.font: Theme.body2], for: .normal)
+        skip.setTitleTextAttributes([NSAttributedString.Key.font: Theme.body2], for: .highlighted)
+        return skip
     }
 }

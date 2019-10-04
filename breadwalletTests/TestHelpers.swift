@@ -45,6 +45,21 @@ func initWallet(walletManager: BTCWalletManager) {
     }
     while !didInitWallet {
         //This Can't use a semaphore because the initWallet callback gets called on the main thread
-        RunLoop.current.run(mode: .defaultRunLoopMode, before: .distantFuture)
+        RunLoop.current.run(mode: RunLoop.Mode.default, before: .distantFuture)
     }
+}
+
+func setupNewWallet(keyStore: KeyStore) -> BTCWalletManager? {
+    let _ = keyStore.setRandomSeedPhrase()
+    guard let mpk = keyStore.masterPubKey else { XCTFail("masterPubKey should not be nil"); return nil }
+
+    guard let walletManager = try? BTCWalletManager(currency: Currencies.btc,
+                                                       masterPubKey: mpk,
+                                                       earliestKeyTime: keyStore.creationTime,
+                                                       dbPath: Currencies.btc.dbPath) else {
+                                                        XCTFail("failed to create BTCWalletManager")
+                                                        return nil
+    }
+    initWallet(walletManager: walletManager)
+    return walletManager
 }

@@ -8,18 +8,29 @@
 
 import UIKit
 
-class EnterPhraseCell : UICollectionViewCell {
+class EnterPhraseCell: UICollectionViewCell {
 
-    //MARK: - Public
+    // MARK: - Public
     override init(frame: CGRect) {
         super.init(frame: frame)
         setup()
     }
 
+    private func cellPlaceHolder(_ index: Int) -> NSAttributedString {
+        return NSAttributedString(string: "\(index + 1)", attributes: [NSAttributedString.Key.foregroundColor: Theme.tertiaryText])
+    }
+    
+    func updatePlaceholder() {
+        if let text = textField.text, text.isEmpty, let index = self.index, !textField.isFirstResponder {
+            textField.attributedPlaceholder = self.cellPlaceHolder(index)
+        } else {
+            textField.attributedPlaceholder = nil
+        }
+    }
+    
     var index: Int? {
         didSet {
-            guard let index = index else { return }
-            label.text = "\(index + 1)"
+            updatePlaceholder()
         }
     }
     private(set) var text: String?
@@ -47,6 +58,7 @@ class EnterPhraseCell : UICollectionViewCell {
 
     var didEnterSpace: (() -> Void)?
     var isWordValid: ((String) -> Bool)?
+    var didPasteWords: (([String]) -> Bool)?
 
     func disablePreviousButton() {
         previousField.tintColor = .secondaryShadow
@@ -58,34 +70,49 @@ class EnterPhraseCell : UICollectionViewCell {
         nextField.isEnabled = false
     }
 
-    //MARK: - Private
+    // MARK: - Private
     let textField = UITextField()
-    private let label = UILabel(font: .customBody(size: 13.0), color: .white)
     private let nextField = UIButton.icon(image: #imageLiteral(resourceName: "RightArrow"), accessibilityLabel: S.RecoverWallet.rightArrow)
     private let previousField = UIButton.icon(image: #imageLiteral(resourceName: "LeftArrow"), accessibilityLabel: S.RecoverWallet.leftArrow)
     private let done = UIButton(type: .system)
-    fileprivate let separator = UIView(color: .secondaryShadow)
+    fileprivate let focusBar = UIView(color: Theme.accent)
     fileprivate var hasDisplayedInvalidState = false
 
     private func setup() {
+        
+        backgroundColor = Theme.tertiaryBackground
+        contentView.backgroundColor = Theme.tertiaryBackground
+        
+        contentView.layer.cornerRadius = 2.0
+        contentView.layer.masksToBounds = true
+        
         contentView.addSubview(textField)
-        contentView.addSubview(separator)
-        contentView.addSubview(label)
-
+        contentView.addSubview(focusBar)
+        
         textField.constrain([
             textField.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            textField.topAnchor.constraint(equalTo: contentView.topAnchor, constant: C.padding[1]),
-            textField.trailingAnchor.constraint(equalTo: contentView.trailingAnchor) ])
-        separator.constrain([
-            separator.leadingAnchor.constraint(equalTo: textField.leadingAnchor, constant: C.padding[1]),
-            separator.topAnchor.constraint(equalTo: textField.bottomAnchor),
-            separator.trailingAnchor.constraint(equalTo: textField.trailingAnchor, constant: -C.padding[1]),
-            separator.heightAnchor.constraint(equalToConstant: 1.0) ])
-        label.constrain([
-            label.leadingAnchor.constraint(equalTo: separator.leadingAnchor),
-            label.topAnchor.constraint(equalTo: separator.bottomAnchor),
-            label.trailingAnchor.constraint(equalTo: separator.trailingAnchor) ])
+            textField.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            textField.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+            ])
+        
+        focusBar.constrain([
+            focusBar.leftAnchor.constraint(equalTo: contentView.leftAnchor),
+            focusBar.rightAnchor.constraint(equalTo: contentView.rightAnchor),
+            focusBar.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            focusBar.heightAnchor.constraint(equalToConstant: 2)
+            ])
+        
+        hideFocusBar()
+        
         setData()
+    }
+    
+    private func showFocusBar() {
+        focusBar.isHidden = false
+    }
+    
+    private func hideFocusBar() {
+        focusBar.isHidden = true
     }
 
     private func setData() {
@@ -94,10 +121,10 @@ class EnterPhraseCell : UICollectionViewCell {
         textField.autocorrectionType = .no
         textField.textAlignment = .center
         textField.autocapitalizationType = .none
+        textField.font = E.isSmallScreen ? Theme.body2 : Theme.body1
         textField.delegate = self
         textField.addTarget(self, action: #selector(EnterPhraseCell.textChanged(textField:)), for: .editingChanged)
 
-        label.textAlignment = .center
         previousField.tintColor = .secondaryGrayText
         nextField.tintColor = .secondaryGrayText
         done.setTitle(S.RecoverWallet.done, for: .normal)
@@ -136,11 +163,22 @@ class EnterPhraseCell : UICollectionViewCell {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
 }
 
-extension EnterPhraseCell : UITextFieldDelegate {
+extension EnterPhraseCell: UITextFieldDelegate {
+    
     func textFieldDidEndEditing(_ textField: UITextField) {
         setColors(textField: textField)
+        if let text = textField.text, let isValid = isWordValid, (isValid(text) || text.isEmpty) {
+            hideFocusBar()
+        }
+        updatePlaceholder()
+    }
+    
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        showFocusBar()
+        updatePlaceholder()
     }
 
     @objc func textChanged(textField: UITextField) {
@@ -155,16 +193,30 @@ extension EnterPhraseCell : UITextFieldDelegate {
         }
     }
 
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        guard E.isDebug || E.isTestFlight else { return true }
+        if string.count == UIPasteboard.general.string?.count,
+            let didPasteWords = didPasteWords,
+            string == UIPasteboard.general.string?.replacingOccurrences(of: "\n", with: " ") {
+            let words = string.components(separatedBy: " ")
+            if didPasteWords(words) {
+                return false
+            }
+        }
+        return true
+    }
+
     private func setColors(textField: UITextField) {
         guard let isWordValid = isWordValid else { return }
         guard let word = textField.text else { return }
-        if isWordValid(word) || word == "" {
-            textField.textColor = .white
-            separator.backgroundColor = .secondaryShadow
+        if isWordValid(word) || word.isEmpty {
+            textField.textColor = Theme.primaryText
+            focusBar.backgroundColor = Theme.accent
         } else {
-            textField.textColor = .cameraGuideNegative
-            separator.backgroundColor = .cameraGuideNegative
+            textField.textColor = Theme.error
+            focusBar.backgroundColor = Theme.error
             hasDisplayedInvalidState = true
         }
     }
+    
 }

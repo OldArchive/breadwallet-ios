@@ -25,6 +25,7 @@
 
 import Foundation
 
+// swiftlint:disable legacy_hashing
 
 public typealias BRHTTPRouteMatch = [String: [String]]
 
@@ -94,8 +95,7 @@ open class BRHTTPRoutePair {
         if p.hasSuffix("/") {
             p = String(request.path[..<request.path.index(request.path.endIndex, offsetBy: -1)])
         }
-        if let m = regex.firstMatch(in: request.path, options: [], range: NSMakeRange(0, p.count))
-            , m.numberOfRanges - 1 == captureGroups.count {
+        if let m = regex.firstMatch(in: request.path, options: [], range: NSRange(location: 0, length: p.count)), m.numberOfRanges - 1 == captureGroups.count {
                 var match = BRHTTPRouteMatch()
                 for i in 1..<m.numberOfRanges {
                     let key = captureGroups[i-1]!
@@ -118,7 +118,7 @@ open class BRHTTPRouter: BRHTTPMiddleware {
     fileprivate var wsServer = BRWebSocketServer()
     
     open func handle(_ request: BRHTTPRequest, next: @escaping (BRHTTPMiddlewareResponse) -> Void) {
-        var response: BRHTTPResponse? = nil
+        var response: BRHTTPResponse?
         
         for (routePair, route) in routes {
             if let match = routePair.match(request) {

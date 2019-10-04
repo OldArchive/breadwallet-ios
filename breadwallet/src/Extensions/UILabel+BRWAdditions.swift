@@ -38,13 +38,13 @@ extension UILabel {
     }
 
     func pushNewText(_ newText: String) {
-        let animation:CATransition = CATransition()
+        let animation: CATransition = CATransition()
         animation.timingFunction = CAMediaTimingFunction(name:
-            kCAMediaTimingFunctionEaseInEaseOut)
-        animation.type = kCATransitionPush
-        animation.subtype = kCATransitionFromTop
+            CAMediaTimingFunctionName.easeInEaseOut)
+        animation.type = CATransitionType.push
+        animation.subtype = CATransitionSubtype.fromTop
         animation.duration = C.animationDuration
-        layer.add(animation, forKey: kCATransitionPush)
+        layer.add(animation, forKey: CATransitionType.push.rawValue)
         text = newText
     }
 }

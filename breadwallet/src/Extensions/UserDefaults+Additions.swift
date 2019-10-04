@@ -28,15 +28,89 @@ private let hasCompletedKYC = "hasCompletedKYCKey"
 private let hasAgreedToCrowdsaleTermsKey = "hasAgreedToCrowdsaleTermsKey"
 private let feesKey = "feesKey"
 private let selectedCurrencyCodeKey = "selectedCurrencyCodeKey"
-private let mostRecentSelectedCurrencyCodeKey = "mostRecentSelectedCurrencyCodeKey"
+private let mostRecentSelectedCurrencyCodeKey = "mostRecentSelectedSPVCurrencyCodeKey"
 private let hasSetSelectedCurrencyKey = "hasSetSelectedCurrencyKey"
 private let hasBchConnectedKey = "hasBchConnectedKey"
 private let rescanStateKeyPrefix = "lastRescan" // append uppercased currency code for key
 private let hasOptedInSegwitKey = "hasOptedInSegwitKey"
 private let hasScannedForTokenBalancesKey = "hasScannedForTokenBalances"
+private let debugShouldAutoEnterPinKey = "shouldAutoEnterPIN"
+private let debugShouldSuppressPaperKeyPromptKey = "shouldSuppressPaperKeyPrompt"
+private let debugShouldShowPaperKeyPreviewKey = "debugShouldShowPaperKeyPreviewKey"
+private let debugShowAppRatingPromptOnEnterWalletKey = "debugShowAppRatingPromptOnEnterWalletKey"
+private let debugSuppressAppRatingPromptKey = "debugSuppressAppRatingPromptKey"
+private let shouldHideBRDRewardsAnimationKey = "shouldHideBRDRewardsAnimationKey"
+private let shouldHideBRDCellHighlightKey = "shouldHideBRDCellHighlightKey"
+private let debugBackendHostKey = "debugBackendHostKey"
+private let debugWebBundleNameKey = "debugWebBundleNameKey"
+private let platformDebugURLKey = "platformDebugURLKey"
+private let appLaunchCountKey = "appLaunchCountKey"
+private let notificationOptInDeferralCountKey = "notificationOptInDeferCountKey"
+private let appLaunchesAtLastNotificationDeferralKey = "appLaunchesAtLastNotificationDeferralKey"
+private let didTapTradeNotificationKey = "didTapTradeNotificationKey"
+private let debugEthereumNetworkModeKey = "debugEthereumNetworkMode"
+
+typealias ResettableBooleanSetting = [String: Bool]
+typealias ResettableObjectSetting = String
 
 extension UserDefaults {
+    
+    // Add any keys here that you want to be able to reset without having
+    // to reset the simulator settings.
+    static let resettableBooleans: [ResettableBooleanSetting] = [
+        [hasPromptedForEmailKey: false],
+        [hasSubscribedToEmailUpdatesKey: false],
+        [hasPromptedBiometricsKey: false],
+        [isBiometricsEnabledKey: false],
+        [hasPromptedShareDataKey: false],
+        [hasOptedInSegwitKey: false],
+        [debugShouldAutoEnterPinKey: false],
+        [debugShouldSuppressPaperKeyPromptKey: false],
+        [debugShouldShowPaperKeyPreviewKey: false],
+        [debugSuppressAppRatingPromptKey: false],
+        [debugShowAppRatingPromptOnEnterWalletKey: false],
+        [shouldHideBRDCellHighlightKey: false],
+        [shouldHideBRDRewardsAnimationKey: false],
+        [didTapTradeNotificationKey: false]
+    ]
+    
+    static let resettableObjects: [ResettableObjectSetting] = [
+        writePaperPhraseDateKey,
+        debugEthereumNetworkModeKey
+    ]
+    
+    // Called from the Reset User Defaults menu item to allow the resetting of
+    // the UserDefaults state for showing/hiding elements, etc.
+    static func resetAll() {
+        
+        for resettableBooelan in resettableBooleans {
+            if let key = resettableBooelan.keys.first {
+                let defaultValue = resettableBooelan[key]
+                defaults.set(defaultValue, forKey: key)
+            }
+        }
+        
+        reset(for: Announcement.hasShownKeyPrefix)
+        reset(for: NotificationHandler.hasShownInAppNotificationKeyPrefix)
 
+        for resettableObject in resettableObjects {
+            defaults.removeObject(forKey: resettableObject)
+        }
+        
+        appLaunchCount = 0
+        notificationOptInDeferralCount = 0
+        appLaunchesAtLastNotificationDeferral = 0
+    }
+    
+    static func reset(for keysWithPrefix: String) {
+        defaults.dictionaryRepresentation().keys.filter({ return $0.hasPrefix(keysWithPrefix) }).forEach { (key) in
+            defaults.set(false, forKey: key)
+        }
+    }
+}
+
+extension UserDefaults {
+    
     static var isBiometricsEnabled: Bool {
         get {
             guard defaults.object(forKey: isBiometricsEnabledKey) != nil else {
@@ -44,7 +118,9 @@ extension UserDefaults {
             }
             return defaults.bool(forKey: isBiometricsEnabledKey)
         }
-        set { defaults.set(newValue, forKey: isBiometricsEnabledKey) }
+        set { 
+            defaults.set(newValue, forKey: isBiometricsEnabledKey)
+        }
     }
 
     static var defaultCurrencyCode: String {
@@ -147,28 +223,42 @@ extension UserDefaults {
     static var fees: Fees? {
         //Returns nil if feeCacheTimeout exceeded
         get {
-            if let feeData = defaults.data(forKey: feesKey), let fees = try? JSONDecoder().decode(Fees.self, from: feeData){
+            if let feeData = defaults.data(forKey: feesKey), let fees = try? JSONDecoder().decode(Fees.self, from: feeData) {
                 return (Date().timeIntervalSince1970 - fees.timestamp) <= C.feeCacheTimeout ? fees : nil
             } else {
                 return nil
             }
         }
         set {
-            if let fees = newValue, let data = try? JSONEncoder().encode(fees){
+            if let fees = newValue, let data = try? JSONEncoder().encode(fees) {
                 defaults.set(data, forKey: feesKey)
             }
         }
     }
     
-    static func rescanState(for currency: CurrencyDef) -> RescanState? {
+    static func rescanState(for currency: Currency) -> RescanState? {
         let key = rescanStateKeyPrefix + currency.code.uppercased()
         guard let data = defaults.object(forKey: key) as? Data else { return nil }
         return try? PropertyListDecoder().decode(RescanState.self, from: data)
     }
     
-    static func setRescanState(for currency: CurrencyDef, to state: RescanState) {
+    static func setRescanState(for currency: Currency, to state: RescanState) {
         let key = rescanStateKeyPrefix + currency.code.uppercased()
         defaults.set(try? PropertyListEncoder().encode(state), forKey: key)
+    }
+    
+    private static func lastBlockHeightKey(for currency: Currency) -> String {
+        return "LastBlockHeightKey-\(currency.code)"
+    }
+    
+    // Returns the stored value for the height of the last block that was successfully sync'd for the given currency.
+    static func lastSyncedBlockHeight(for currency: Currency) -> UInt32 {
+        return UInt32(UserDefaults.standard.integer(forKey: lastBlockHeightKey(for: currency)))
+    }
+    
+    // Sets the stored value for the height of the last block that was successfully sync'd for the given currency.
+    static func setLastSyncedBlockHeight(height: UInt32, for currency: Currency) {
+        UserDefaults.standard.set(height, forKey: lastBlockHeightKey(for: currency))
     }
     
     static var hasOptedInSegwit: Bool {
@@ -190,7 +280,7 @@ extension UserDefaults {
     }
 }
 
-//MARK: - Wallet Requires Backup
+// MARK: - Wallet Requires Backup
 extension UserDefaults {
     static var legacyWalletNeedsBackup: Bool? {
         guard defaults.object(forKey: legacyWalletNeedsBackupKey) != nil else {
@@ -204,10 +294,17 @@ extension UserDefaults {
     }
 
     static var writePaperPhraseDate: Date? {
-        get { return defaults.object(forKey: writePaperPhraseDateKey) as! Date? }
+        get { return defaults.object(forKey: writePaperPhraseDateKey) as? Date }
         set { defaults.set(newValue, forKey: writePaperPhraseDateKey) }
     }
 
+    static var writePaperPhraseDateString: String {
+        guard let date = writePaperPhraseDate else { return "" }
+        let df = DateFormatter()
+        df.setLocalizedDateFormatFromTemplate("MMMM d, yyyy")
+        return String(format: S.StartPaperPhrase.date, df.string(from: date))
+    }
+    
     static var walletRequiresBackup: Bool {
         if UserDefaults.writePaperPhraseDate != nil {
             return false
@@ -222,7 +319,7 @@ extension UserDefaults {
     }
 }
 
-//MARK: - Prompts
+// MARK: - Prompts
 extension UserDefaults {
     static var hasPromptedBiometrics: Bool {
         get { return defaults.bool(forKey: hasPromptedBiometricsKey) }
@@ -238,25 +335,41 @@ extension UserDefaults {
         get { return defaults.bool(forKey: hasSubscribedToEmailUpdatesKey ) }
         set { defaults.set(newValue, forKey: hasSubscribedToEmailUpdatesKey ) }
     }
+
+    static var shouldShowBRDRewardsAnimation: Bool {
+        // boolean logic is flipped so that 'hide == false' is the default state,
+        // whereas the calling code can check whether to show, which has clearer semantics
+        // (same logic is employed for 'shouldShowBRDCellHighlight')
+        get { return !defaults.bool(forKey: shouldHideBRDRewardsAnimationKey)   }
+        set { defaults.set(!newValue, forKey: shouldHideBRDRewardsAnimationKey) }
+    }
+
+    static var shouldShowBRDCellHighlight: Bool {
+        get { return !defaults.bool(forKey: shouldHideBRDCellHighlightKey)   }
+        set { defaults.set(!newValue, forKey: shouldHideBRDCellHighlightKey) }
+    }
+    
+    // Returns the number of times the user has deferred the notifications opt-in decision.
+    static var notificationOptInDeferralCount: Int {
+        get { return defaults.integer(forKey: notificationOptInDeferralCountKey) }
+        set { defaults.set(newValue, forKey: notificationOptInDeferralCountKey) }
+    }
+    
+    // Returns the number of times the user has deferred the notifications opt-in decision.
+    static var appLaunchesAtLastNotificationDeferral: Int {
+        get { return defaults.integer(forKey: appLaunchesAtLastNotificationDeferralKey) }
+        set { defaults.set(newValue, forKey: appLaunchesAtLastNotificationDeferralKey) }
+    }
+    
+    // The count of app-foreground events. This is used in part for determining when to show the app-rating
+    // prompt, as well as when to ask the user to opt into push notifications.
+    static var appLaunchCount: Int {
+        get { return defaults.integer(forKey: appLaunchCountKey ) }
+        set { defaults.set(newValue, forKey: appLaunchCountKey )}
+    }
 }
 
-//MARK: - KYC
-extension UserDefaults {
-    static func hasCompletedKYC(forContractAddress: String) -> Bool {
-        return defaults.bool(forKey: "\(hasCompletedKYC)\(forContractAddress)")
-    }
-
-    static func setHasCompletedKYC(_ hasCompleted: Bool, contractAddress: String) {
-        defaults.set(hasCompleted, forKey: "\(hasCompletedKYC)\(contractAddress)")
-    }
-
-    static var hasAgreedToCrowdsaleTerms: Bool {
-        get { return defaults.bool(forKey: hasAgreedToCrowdsaleTermsKey) }
-        set { defaults.set(newValue, forKey: hasAgreedToCrowdsaleTermsKey) }
-    }
-}
-
-//MARK: - State Restoration
+// MARK: - State Restoration
 extension UserDefaults {
     static var selectedCurrencyCode: String? {
         get {
@@ -289,5 +402,166 @@ extension UserDefaults {
     static var hasBchConnected: Bool {
         get { return defaults.bool(forKey: hasBchConnectedKey) }
         set { defaults.set(newValue, forKey: hasBchConnectedKey) }
+    }
+}
+
+// Dev Settings
+extension UserDefaults {
+    
+    // Toggles the UserDefaults boolean setting for the given key and returns the new value.
+    static func toggleBoolean(key: String) -> Bool {
+        let newValue = !defaults.bool(forKey: key)
+        defaults.set(newValue, forKey: key)
+        return newValue
+    }
+
+    static func toggleAutoEnterPIN() -> Bool {
+        return toggleBoolean(key: debugShouldAutoEnterPinKey)
+    }
+    
+    static func toggleSuppressPaperKeyPrompt() -> Bool {
+        return toggleBoolean(key: debugShouldSuppressPaperKeyPromptKey)
+    }
+    
+    static func togglePaperKeyPreview() -> Bool {
+        return toggleBoolean(key: debugShouldShowPaperKeyPreviewKey)
+    }
+    
+    static var debugShouldAutoEnterPIN: Bool {
+        
+        get {
+            // always return false for release builds
+            if E.isSimulator || E.isDebug || E.isTestFlight {
+                return defaults.bool(forKey: debugShouldAutoEnterPinKey)
+            } else {
+                return false
+            }
+        }
+        
+        set { 
+            defaults.setValue(newValue, forKey: debugShouldAutoEnterPinKey)
+        }
+    }
+    
+    static var debugShouldSuppressPaperKeyPrompt: Bool {
+        
+        get {
+            // always return false for release builds
+            if E.isSimulator || E.isDebug || E.isTestFlight {
+                return defaults.bool(forKey: debugShouldSuppressPaperKeyPromptKey)
+            } else {
+                return false
+            }
+        }
+        
+        set {
+            defaults.set(newValue, forKey: debugShouldSuppressPaperKeyPromptKey)
+        }
+    }
+    
+    static var debugShouldShowPaperKeyPreview: Bool {
+        
+        get {
+            // always return false for release builds
+            if E.isSimulator || E.isDebug || E.isTestFlight {
+                return defaults.bool(forKey: debugShouldShowPaperKeyPreviewKey)
+            } else {
+                return false
+            }
+        }
+        
+        set {
+            defaults.set(newValue, forKey: debugShouldShowPaperKeyPreviewKey)
+        }        
+    }
+    
+    // option to always show the app rating prompt when entering a wallet
+    static func toggleShowAppRatingPromptOnEnterWallet() -> Bool {
+        return toggleBoolean(key: debugShowAppRatingPromptOnEnterWalletKey)
+    }
+
+    static var debugShowAppRatingOnEnterWallet: Bool {
+        
+        get {
+            return defaults.bool(forKey: debugShowAppRatingPromptOnEnterWalletKey)
+        }
+        
+        set {
+            defaults.set(newValue, forKey: debugShowAppRatingPromptOnEnterWalletKey)
+        }
+    }
+    
+    // option to always suppress showing the app rating prompt
+    static func toggleSuppressAppRatingPrompt() -> Bool {
+        return toggleBoolean(key: debugSuppressAppRatingPromptKey)
+    }
+
+    static var debugSuppressAppRatingPrompt: Bool {
+        
+        get {
+            return defaults.bool(forKey: debugSuppressAppRatingPromptKey)
+        }
+        
+        set {
+            defaults.set(newValue, forKey: debugSuppressAppRatingPromptKey)
+        }
+    }
+
+    static var debugBackendHost: String? {
+        get {
+            return defaults.string(forKey: debugBackendHostKey)
+        }
+
+        set {
+            defaults.set(newValue, forKey: debugBackendHostKey)
+        }
+    }
+
+    static var debugWebBundleName: String? {
+        get {
+            return defaults.string(forKey: debugWebBundleNameKey)
+        }
+
+        set {
+            defaults.set(newValue, forKey: debugWebBundleNameKey)
+        }
+    }
+
+    static var platformDebugURL: URL? {
+        get {
+            return defaults.url(forKey: platformDebugURLKey)
+        }
+
+        set {
+            defaults.set(newValue, forKey: platformDebugURLKey)
+        }
+    }
+    
+    static var didTapTradeNotification: Bool {
+        get {
+            return defaults.bool(forKey: didTapTradeNotificationKey)
+        }
+        
+        set {
+            defaults.set(newValue, forKey: didTapTradeNotificationKey)
+        }
+    }
+    
+    static var debugEthereumNetworkMode: EthereumMode? {
+        get {
+            if let value = defaults.object(forKey: debugEthereumNetworkModeKey) as? Int {
+                return EthereumMode(rawValue: value)
+            } else {
+                return nil
+            }
+        }
+        
+        set {
+            if let value = newValue?.rawValue {
+                defaults.set(value, forKey: debugEthereumNetworkModeKey)
+            } else {
+                defaults.removeObject(forKey: debugEthereumNetworkModeKey)
+            }
+        }
     }
 }

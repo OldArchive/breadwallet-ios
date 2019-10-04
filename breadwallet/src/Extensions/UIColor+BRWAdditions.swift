@@ -9,7 +9,7 @@
 import UIKit
 
 extension UIColor {
-
+        
     static var newGradientStart: UIColor {
         return UIColor.fromHex("FB5491")
     }
@@ -19,7 +19,7 @@ extension UIColor {
     }
 
     static var darkBackground: UIColor {
-        return UIColor.fromHex("302442")
+        return Theme.primaryBackground
     }
 
     static var darkerBackground: UIColor {
@@ -27,7 +27,7 @@ extension UIColor {
     }
     
     static var darkPromptBackground: UIColor {
-        return UIColor.fromHex("1E1C41")
+        return UIColor.fromHex("3E334F")
     }
 
     static var darkPromptTitleColor: UIColor {
@@ -49,7 +49,7 @@ extension UIColor {
     static var orangeText: UIColor {
         return UIColor.fromHex("FA724D")
     }
-
+    
     static var newWhite: UIColor {
         return UIColor.fromHex("BDBDBD")
     }
@@ -64,15 +64,11 @@ extension UIColor {
 
     // MARK: Buttons
     static var primaryButton: UIColor {
-        return .navigationTint
+        return UIColor.fromHex("5B6DEE")
     }
     
     static var orangeButton: UIColor {
         return UIColor.fromHex("E7AA41")
-    }
-
-    static var primaryText: UIColor {
-        return .white
     }
 
     static var secondaryButton: UIColor {
@@ -83,6 +79,8 @@ extension UIColor {
         return UIColor(red: 213.0/255.0, green: 218.0/255.0, blue: 224.0/255.0, alpha: 1.0)
     }
 
+    // MARK: text color
+        
     static var darkText: UIColor {
         return UIColor.fromHex("4F4F4F")
     }
@@ -97,10 +95,6 @@ extension UIColor {
 
     static var lightTableViewSectionHeaderBackground: UIColor {
         return UIColor.fromHex("ECECEC")
-    }
-
-    static var syncingBackground: UIColor {
-        return UIColor.fromHex("E5E5E5")
     }
 
     static var darkLine: UIColor {
@@ -204,6 +198,10 @@ extension UIColor {
         return UIColor(white: 1.0, alpha: 0.2)
     }
 
+    static var darkOpaqueButton: UIColor {
+        return UIColor(white: 1.0, alpha: 0.05)
+    }
+    
     static var blueGradientStart: UIColor {
         return UIColor(red: 99.0/255.0, green: 188.0/255.0, blue: 255.0/255.0, alpha: 1.0)
     }
@@ -257,11 +255,11 @@ extension UIColor {
     }
     
     static var navigationTint: UIColor {
-        return UIColor.fromHex("29ABE2")
+        return .white
     }
     
     static var navigationBackground: UIColor {
-        return UIColor.fromHex("251935")
+        return Theme.primaryBackground
     }
     
     static var transparentCellBackground: UIColor {
@@ -274,6 +272,42 @@ extension UIColor {
     
     static var disabledCellBackground: UIColor {
         return UIColor.fromHex("190C2A")
+    }
+    
+    static var pageIndicatorDotBackground: UIColor {
+        return UIColor.fromHex("1F1E3D")
+    }
+    
+    static var pageIndicatorDot: UIColor {
+        return  UIColor.fromHex("027AFF")
+    }
+    
+    static var onboardingHeadingText: UIColor {
+        return .white
+    }
+    
+    static var onboardingSubheadingText: UIColor {
+        return UIColor.fromHex("8B89A1")
+    }
+    
+    static var onboardingSkipButtonTitle: UIColor {
+        return UIColor.fromHex("8B89A1")
+    }
+    
+    static var onboardingOrangeText: UIColor {
+        return UIColor.fromHex("EA8017")
+    }
+
+    static var rewardsViewNormalTitle: UIColor {
+        return UIColor.fromHex("2A2A2A")
+    }
+
+    static var rewardsViewExpandedTitle: UIColor {
+        return UIColor.fromHex("441E36")
+    }
+
+    static var rewardsViewExpandedBody: UIColor {
+        return UIColor.fromHex("#441E36").withAlphaComponent(0.7)
     }
 }
 
@@ -294,12 +328,12 @@ extension UIColor {
     }
     
     var toHex: String {
-        var r:CGFloat = 0
-        var g:CGFloat = 0
-        var b:CGFloat = 0
-        var a:CGFloat = 0
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
         getRed(&r, green: &g, blue: &b, alpha: &a)
-        let rgb:Int = (Int)(r*255)<<16 | (Int)(g*255)<<8 | (Int)(b*255)<<0
-        return String(format:"#%06x", rgb)
+        let rgb: Int = (Int)(r*255)<<16 | (Int)(g*255)<<8 | (Int)(b*255)<<0
+        return String(format: "#%06x", rgb)
     }
 }

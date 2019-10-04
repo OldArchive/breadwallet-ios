@@ -13,6 +13,7 @@ enum ButtonType {
     case secondary
     case tertiary
     case blackTransparent
+    case darkOpaque
     case secondaryTransparent
     case search
 }
@@ -52,21 +53,28 @@ class BRDButton: UIControl {
     private let type: ButtonType
     private let container = UIView()
     private let label = UILabel()
-    private let cornerRadius: CGFloat = 6.0
+    private let cornerRadius: CGFloat = 2.0
     private var imageView: UIImageView?
 
     override var isHighlighted: Bool {
         didSet {
+            // Shrinks the button to 97% and drops it down 4 points to give a 3D press-down effect.
+            let duration = 0.21
+            let scale: CGFloat = 0.97
+            let drop: CGFloat = 4.0
+            
             if isHighlighted {
-                UIView.animate(withDuration: 0.04, animations: {
-                    let shrink = CATransform3DMakeScale(0.97, 0.97, 1.0)
-                    let translate = CATransform3DTranslate(shrink, 0, 4.0, 0)
-                    self.container.layer.transform = translate
-                })
+                let shrink = CATransform3DMakeScale(scale, scale, 1.0)
+                let translate = CATransform3DTranslate(shrink, 0, drop, 0)
+
+                UIView.animate(withDuration: duration, delay: 0, options: .curveEaseInOut, animations: { 
+                    self.container.layer.transform = translate                    
+                }, completion: nil)
+                
             } else {
-                UIView.animate(withDuration: 0.04, animations: {
-                    self.container.transform = CGAffineTransform.identity
-                })
+                UIView.animate(withDuration: duration, delay: 0, options: .curveEaseInOut, animations: { 
+                    self.container.transform = CGAffineTransform.identity                  
+                }, completion: nil)
             }
         }
     }
@@ -147,8 +155,9 @@ class BRDButton: UIControl {
     private func setColors() {
         switch type {
         case .primary:
-            container.backgroundColor = isEnabled ? .primaryButton : UIColor.lightGray
-            label.textColor = isEnabled ? .primaryText : UIColor.primaryText.withAlphaComponent(0.75)
+            let bgColor = isEnabled ? UIColor.primaryButton : UIColor.primaryButton.withAlphaComponent(0.5)
+            container.backgroundColor = bgColor
+            label.textColor = isEnabled ? Theme.primaryText : Theme.secondaryText
             container.layer.borderColor = nil
             container.layer.borderWidth = 0.0
             imageView?.tintColor = .white
@@ -170,6 +179,9 @@ class BRDButton: UIControl {
             container.layer.borderColor = UIColor.darkText.cgColor
             container.layer.borderWidth = 1.0
             imageView?.tintColor = .grayTextTint
+        case .darkOpaque:
+            container.backgroundColor = .darkOpaqueButton
+            label.textColor = .white
         case .secondaryTransparent:
             container.backgroundColor = .transparentButton
             label.textColor = .white

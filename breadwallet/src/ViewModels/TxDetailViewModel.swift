@@ -51,7 +51,7 @@ struct TxDetailViewModel: TxViewModel {
             attributedString.insert(iconString, at: 0)
             attributedString.addAttributes([.foregroundColor: UIColor.receivedGreen,
                                             .font: UIFont.customBody(size: 0.0)],
-                                           range: NSMakeRange(0, iconString.length))
+                                           range: NSRange(location: 0, length: iconString.length))
             return attributedString
         } else {
             return NSAttributedString(string: S.TransactionDetails.initializedTimestampHeader)
@@ -82,8 +82,9 @@ extension TxDetailViewModel {
         exchangeRate = TxDetailViewModel.exchangeRateText(tx: tx)
         transactionHash = tx.hash
         self.tx = tx
-        
-        if let tx = tx as? EthLikeTransaction {
+
+        // gas limit/price not available for incoming token transfers
+        if let tx = tx as? EthLikeTransaction, (tx.direction == .sent || tx is EthTransaction) {
             let gasFormatter = NumberFormatter()
             gasFormatter.numberStyle = .decimal
             gasFormatter.maximumFractionDigits = 0
@@ -99,7 +100,11 @@ extension TxDetailViewModel {
             // gas used is unknown until confirmed
             if tx.direction == .sent && tx.confirmations > 0 {
                 // omit total for ERC20
-                let totalAmount: Amount? = (currency is ERC20Token) ? nil : Amount(amount: tx.amount + totalFee, currency: tx.currency, rate: rate, maximumFractionDigits: Amount.highPrecisionDigits)
+                let totalAmount: Amount? = (currency is ERC20Token) ? nil
+                    : Amount(amount: tx.amount + totalFee,
+                             currency: tx.currency,
+                             rate: rate,
+                             maximumFractionDigits: Amount.highPrecisionDigits)
                 
                 if Store.state.isBtcSwapped {
                     fee = feeAmount.fiatDescription

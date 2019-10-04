@@ -8,7 +8,9 @@
 
 import UIKit
 
-class WhiteNumberPad : GenericPinPadCell {
+// swiftlint:disable unused_setter_value
+
+class WhiteNumberPad: GenericPinPadCell {
 
     override var style: PinPadStyle {
         get { return .white }
@@ -20,7 +22,7 @@ class WhiteNumberPad : GenericPinPadCell {
             backgroundColor = .secondaryShadow
             label.textColor = .darkText
         } else {
-            if text == "" || text == PinPadViewController.SpecialKeys.delete.rawValue {
+            if (text?.isEmpty ?? false) || text == PinPadViewController.SpecialKeys.delete.rawValue {
                 backgroundColor = .whiteTint
                 imageView.image = imageView.image?.withRenderingMode(.alwaysTemplate)
                 imageView.tintColor = .grayTextTint

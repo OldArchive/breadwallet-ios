@@ -8,14 +8,15 @@
 
 import UIKit
 
-class WalletDisabledView : UIView {
+class WalletDisabledView: UIView {
 
     func setTimeLabel(string: String) {
         label.text = string
     }
 
     init() {
-        self.faq = UIButton.buildFaqButton(articleId: ArticleIds.walletDisabled)
+        faq = UIButton.buildFaqButton(articleId: ArticleIds.walletDisabled)
+        faq.tintColor = .whiteTint
         blur = UIVisualEffectView()
         super.init(frame: .zero)
         setup()
@@ -41,11 +42,11 @@ class WalletDisabledView : UIView {
         }
     }
 
-    private let label = UILabel(font: .customBold(size: 20.0), color: .darkText)
+    private let label = UILabel(font: Theme.body1, color: Theme.primaryText)
     private let faq: UIButton
     private let blur: UIVisualEffectView
-    private let reset = BRDButton(title: S.UnlockScreen.resetPin, type: .blackTransparent)
-    private let effect = UIBlurEffect(style: .light)
+    private let reset = BRDButton(title: S.UnlockScreen.resetPin, type: .primary)
+    private let effect = UIBlurEffect(style: .regular)
 
     private func setup() {
         addSubviews()
@@ -56,7 +57,6 @@ class WalletDisabledView : UIView {
     private func addSubviews() {
         addSubview(blur)
         addSubview(label)
-        addSubview(faq)
         addSubview(reset)
     }
 
@@ -65,16 +65,12 @@ class WalletDisabledView : UIView {
         label.constrain([
             label.centerYAnchor.constraint(equalTo: blur.centerYAnchor),
             label.centerXAnchor.constraint(equalTo: blur.centerXAnchor) ])
-        faq.constrain([
-            faq.leadingAnchor.constraint(equalTo: leadingAnchor, constant: C.padding[2]),
-            faq.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -C.padding[2]),
-            faq.widthAnchor.constraint(equalToConstant: 44.0),
-            faq.heightAnchor.constraint(equalToConstant: 44.0)])
         reset.constrain([
             reset.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -C.padding[2]),
-            reset.centerYAnchor.constraint(equalTo: faq.centerYAnchor),
+            reset.leadingAnchor.constraint(equalTo: leadingAnchor, constant: C.padding[2]),
             reset.heightAnchor.constraint(equalToConstant: C.Sizes.buttonHeight),
-            reset.widthAnchor.constraint(equalToConstant: 200.0) ])
+            reset.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -C.padding[4])
+            ])
 
     }
 

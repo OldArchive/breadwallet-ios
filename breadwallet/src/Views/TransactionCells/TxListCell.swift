@@ -27,7 +27,7 @@ class TxListCell: UITableViewCell {
     
     // MARK: - Init
     
-    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupViews()
     }
@@ -93,7 +93,7 @@ class TxListCell: UITableViewCell {
             descriptionLabel.heightAnchor.constraint(equalToConstant: 48.0)]
         completeConstraints = [
             descriptionLabel.topAnchor.constraint(equalTo: timestamp.bottomAnchor),
-            descriptionLabel.leadingAnchor.constraint(equalTo: timestamp.leadingAnchor),]
+            descriptionLabel.leadingAnchor.constraint(equalTo: timestamp.leadingAnchor) ]
         statusIndicator.constrain([
             statusIndicator.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             statusIndicator.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: C.padding[2]),

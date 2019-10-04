@@ -23,7 +23,7 @@ class TxStatusCell: UITableViewCell, Subscriber {
     
     // MARK: - Init
     
-    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupViews()
     }
@@ -45,7 +45,6 @@ class TxStatusCell: UITableViewCell, Subscriber {
                                                            left: C.padding[1],
                                                            bottom: -C.padding[2],
                                                            right: -C.padding[1]))
-        
         
         statusIndicator.constrain([
             statusIndicator.topAnchor.constraint(equalTo: container.topAnchor),

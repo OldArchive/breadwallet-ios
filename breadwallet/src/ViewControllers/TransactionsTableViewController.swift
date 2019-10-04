@@ -11,10 +11,10 @@ import SafariServices
 
 private let promptDelay: TimeInterval = 0.6
 
-class TransactionsTableViewController : UITableViewController, Subscriber, Trackable {
+class TransactionsTableViewController: UITableViewController, Subscriber, Trackable {
 
-    //MARK: - Public
-    init(currency: CurrencyDef, walletManager: WalletManager, didSelectTransaction: @escaping ([Transaction], Int) -> Void) {
+    // MARK: - Public
+    init(currency: Currency, walletManager: WalletManager, didSelectTransaction: @escaping ([Transaction], Int) -> Void) {
         self.currency = currency
         self.walletManager = walletManager
         self.didSelectTransaction = didSelectTransaction
@@ -30,10 +30,13 @@ class TransactionsTableViewController : UITableViewController, Subscriber, Track
             tableView.reloadData()
         }
     }
+    
+    var didScrollToYOffset: ((CGFloat) -> Void)?
+    var didStopScrolling: (() -> Void)?
 
-    //MARK: - Private
+    // MARK: - Private
     private let walletManager: WalletManager
-    private let currency: CurrencyDef
+    private let currency: Currency
     
     private let headerCellIdentifier = "HeaderCellIdentifier"
     private let transactionCellIdentifier = "TransactionCellIdentifier"
@@ -49,8 +52,7 @@ class TransactionsTableViewController : UITableViewController, Subscriber, Track
     }
     private let emptyMessage = UILabel.wrapping(font: .customBody(size: 16.0), color: .grayTextTint)
     
-    //TODO:BCH replace with recommend rescan / tx failed prompt
-    private var currentPrompt: Prompt? {
+    private var currentPrompt: PromptView? {
         didSet {
             if currentPrompt != nil && oldValue == nil {
                 tableView.beginUpdates()
@@ -75,15 +77,22 @@ class TransactionsTableViewController : UITableViewController, Subscriber, Track
 
         tableView.separatorStyle = .none
         tableView.estimatedRowHeight = 60.0
-        tableView.rowHeight = UITableViewAutomaticDimension
-        tableView.backgroundColor = .whiteTint
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.contentInsetAdjustmentBehavior = .never
         
         emptyMessage.textAlignment = .center
         emptyMessage.text = S.TransactionDetails.emptyMessage
         
-        //setContentInset()
-
         setupSubscriptions()
+        
+        let header = SyncingHeaderView(currency: currency)
+        header.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: 40.0)
+        tableView.tableHeaderView = header
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        Store.trigger(name: .didViewTransactions(transactions))
     }
     
     private func setupSubscriptions() {
@@ -170,12 +179,12 @@ class TransactionsTableViewController : UITableViewController, Subscriber, Track
 
     private func reload() {
         tableView.reloadData()
-        if transactions.count == 0 {
+        if transactions.isEmpty {
             if emptyMessage.superview == nil {
                 tableView.addSubview(emptyMessage)
                 emptyMessage.constrain([
                     emptyMessage.centerXAnchor.constraint(equalTo: tableView.centerXAnchor),
-                    emptyMessage.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -0), //TODO:UI
+                    emptyMessage.topAnchor.constraint(equalTo: tableView.topAnchor, constant: E.isIPhone5 ? 50.0 : AccountHeaderView.headerViewMinHeight),
                     emptyMessage.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -C.padding[2]) ])
             }
         } else {
@@ -188,7 +197,7 @@ class TransactionsTableViewController : UITableViewController, Subscriber, Track
     }
 }
 
-//MARK: - Cell Builders
+// MARK: - Cell Builders
 extension TransactionsTableViewController {
 
     private func headerCell(tableView: UITableView, indexPath: IndexPath) -> UITableViewCell {
@@ -203,7 +212,9 @@ extension TransactionsTableViewController {
     }
 
     private func transactionCell(tableView: UITableView, indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: transactionCellIdentifier, for: indexPath) as! TxListCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: transactionCellIdentifier,
+                                                       for: indexPath) as? TxListCell
+            else { assertionFailure(); return UITableViewCell() }
         let rate = self.rate ?? Rate.empty
         let viewModel = TxListViewModel(tx: transactions[indexPath.row])
         cell.setTransaction(viewModel,
@@ -212,5 +223,21 @@ extension TransactionsTableViewController {
                             maxDigits: currency.state?.maxDigits ?? currency.commonUnit.decimals,
                             isSyncing: currency.state?.syncState != .success)
         return cell
+    }
+}
+
+extension TransactionsTableViewController {
+    override func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        didScrollToYOffset?(scrollView.contentOffset.y)
+    }
+    
+    override func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            didStopScrolling?()
+        }
+    }
+    
+    override func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        didStopScrolling?()
     }
 }

@@ -8,24 +8,33 @@
 
 import UIKit
 
-class StartFlowPresenter : Subscriber {
+typealias StartFlowCallback = (() -> Void)
 
-    //MARK: - Public
-    init(walletManager: BTCWalletManager, rootViewController: RootNavigationController) {
-        self.walletManager = walletManager
+class StartFlowPresenter: Subscriber, Trackable {
+
+    init(keyMaster: KeyMaster,
+         rootViewController: RootNavigationController, 
+         createHomeScreen: @escaping (UINavigationController) -> HomeScreenViewController,
+         createBuyScreen: @escaping () -> BRWebViewController) {
+        self.keyMaster = keyMaster
         self.rootViewController = rootViewController
         self.navigationControllerDelegate = StartNavigationDelegate()
+        self.createHomeScreen = createHomeScreen
+        self.createBuyScreen = createBuyScreen
         addSubscriptions()
     }
 
-    //MARK: - Private
+    // MARK: - Private
     private let rootViewController: RootNavigationController
     private var navigationController: ModalNavigationController?
     private let navigationControllerDelegate: StartNavigationDelegate
-    private let walletManager: BTCWalletManager
+    private let keyMaster: KeyMaster
     private var loginViewController: UIViewController?
     private let loginTransitionDelegate = LoginTransitionDelegate()
-
+    private var createHomeScreen: ((UINavigationController) -> HomeScreenViewController)
+    private var createBuyScreen: (() -> BRWebViewController)?
+    private var shouldBuyCoinAfterOnboarding: Bool = false
+    
     private var closeButton: UIButton {
         let button = UIButton.close
         button.tintColor = .white
@@ -51,7 +60,7 @@ class StartFlowPresenter : Subscriber {
     private func handleStartFlowChange(state: State) {
         if state.isStartFlowVisible {
             guardProtected(queue: DispatchQueue.main) { [weak self] in
-                self?.presentStartFlow()
+                self?.presentOnboardingFlow()
             }
         } else {
             dismissStartFlow()
@@ -66,71 +75,141 @@ class StartFlowPresenter : Subscriber {
         }
     }
 
-    private func presentStartFlow() {
-        let startViewController = StartViewController(didTapCreate: { [weak self] in
-                                                        self?.pushPinCreationViewControllerForNewWallet()
-        },
-                                                      didTapRecover: { [weak self] in
-            guard let myself = self else { return }
-            let recoverIntro = RecoverWalletIntroViewController(didTapNext: myself.pushRecoverWalletView)
-            myself.navigationController?.setClearNavbar()
-            myself.navigationController?.setNavigationBarHidden(false, animated: false)
-            myself.navigationController?.pushViewController(recoverIntro, animated: true)
-        })
+    private func enterRecoverWalletFlow() {
 
-        navigationController = ModalNavigationController(rootViewController: startViewController)
+        navigationController?.setClearNavbar()
+        navigationController?.setNavigationBarHidden(false, animated: false)
+        
+        let recoverWalletViewController =
+            EnterPhraseViewController(keyMaster: self.keyMaster,
+                                      reason: .setSeed(self.pushPinCreationViewForRecoveredWallet))
+        
+        self.navigationController?.pushViewController(recoverWalletViewController, animated: true)
+    }
+
+    // Displays the onboarding screen (app landing page) that allows the user to either create
+    // a new wallet or restore an existing wallet. 
+    private func presentOnboardingFlow() {
+        
+        // Register the onboarding event context so that events are logged to the server throughout
+        // the onboarding process, including post-walkthrough events such as PIN entry and paper-key entry.
+        EventMonitor.shared.register(.onboarding)
+        
+        let onboardingScreen = OnboardingViewController(didExitOnboarding: { [weak self] (action) in
+            guard let `self` = self else { return }
+            
+            switch action {
+            case .restoreWallet:
+                self.enterRecoverWalletFlow()
+            case .createWallet:
+                self.enterCreateWalletFlow(eventContext: .onboarding)
+            case .createWalletBuyCoin:
+                // This will be checked in dismissStartFlow(), which is called after the PIN
+                // and paper key flows are finished.
+                self.shouldBuyCoinAfterOnboarding = true
+                self.enterCreateWalletFlow(eventContext: .onboarding)
+            }
+        })
+        
+        navigationController = ModalNavigationController(rootViewController: onboardingScreen)
         navigationController?.delegate = navigationControllerDelegate
-        if let startFlow = navigationController {
-            rootViewController.popToRootViewController(animated: false)
-            startFlow.setNavigationBarHidden(true, animated: false)
-            rootViewController.present(startFlow, animated: false, completion: nil)
+        
+        if let onboardingFlow = navigationController {            
+            onboardingFlow.setNavigationBarHidden(true, animated: false)
+            
+            // This will be set to true if the user exits onboarding with the `createWalletBuyCoin` action.
+            shouldBuyCoinAfterOnboarding = false
+            
+            rootViewController.present(onboardingFlow, animated: false) {
+                
+                // Stuff the home screen in as the root view controller so that when
+                // the onboarding flow is finished, the home screen will be present. If 
+                // we push it before the present() call you can briefly see the home screen
+                // before the onboarding screen is displayed -- not good.
+                let homeScreen = self.createHomeScreen(self.rootViewController)
+                self.rootViewController.pushViewController(homeScreen, animated: false)
+            }
         }
     }
 
     private var pushRecoverWalletView: () -> Void {
         return { [weak self] in
-            guard let myself = self else { return }
-            let recoverWalletViewController = EnterPhraseViewController(walletManager: myself.walletManager, reason: .setSeed(myself.pushPinCreationViewForRecoveredWallet))
-            myself.navigationController?.pushViewController(recoverWalletViewController, animated: true)
+            guard let `self` = self else { return }
+            let recoverWalletViewController =
+                EnterPhraseViewController(keyMaster: self.keyMaster,
+                                          reason: .setSeed(self.pushPinCreationViewForRecoveredWallet))
+            self.navigationController?.pushViewController(recoverWalletViewController, animated: true)
         }
     }
 
     private var pushPinCreationViewForRecoveredWallet: (String) -> Void {
         return { [weak self] phrase in
-            guard let myself = self else { return }
-            let pinCreationView = UpdatePinViewController(walletManager: myself.walletManager, type: .creationWithPhrase, showsBackButton: false, phrase: phrase)
+            guard let `self` = self else { return }
+            let pinCreationView = UpdatePinViewController(keyMaster: self.keyMaster, type: .creationWithPhrase, showsBackButton: false, phrase: phrase)
             pinCreationView.setPinSuccess = { _ in
                 DispatchQueue.main.async {
                     Store.trigger(name: .didCreateOrRecoverWallet)
                 }
             }
-            myself.navigationController?.pushViewController(pinCreationView, animated: true)
+            self.navigationController?.pushViewController(pinCreationView, animated: true)
         }
     }
 
+    private func presentPostOnboardingBuyScreen() {
+        guard let createBuyScreen = createBuyScreen else { return }
+        
+        let buyScreen = createBuyScreen()
+        
+        buyScreen.didClose = { [unowned self] in
+            self.navigationController = nil
+        }
+                
+        self.navigationController?.pushViewController(buyScreen, animated: true)
+    }
+    
     private func dismissStartFlow() {
-        navigationController?.dismiss(animated: true) { [weak self] in
-            self?.navigationController = nil
+        
+        saveEvent(context: .onboarding, event: .complete)
+        
+        // Onboarding is finished.
+        EventMonitor.shared.deregister(.onboarding)
+        
+        if self.shouldBuyCoinAfterOnboarding {
+            self.presentPostOnboardingBuyScreen()
+        } else {
+            navigationController?.dismiss(animated: true) { [unowned self] in
+                self.navigationController = nil
+            }
         }
     }
-
-    private func pushPinCreationViewControllerForNewWallet() {
-        let pinCreationViewController = UpdatePinViewController(walletManager: walletManager, type: .creationNoPhrase, showsBackButton: true, phrase: nil)
+    
+    private func enterCreateWalletFlow() {
+        enterCreateWalletFlow(eventContext: .none)
+    }
+    
+    private func enterCreateWalletFlow(eventContext: EventContext) {
+        let pinCreationViewController = UpdatePinViewController(keyMaster: keyMaster,
+                                                                type: .creationNoPhrase,
+                                                                showsBackButton: true,
+                                                                phrase: nil,
+                                                                eventContext: eventContext)
+        let context = eventContext
+        
         pinCreationViewController.setPinSuccess = { [weak self] pin in
             autoreleasepool {
-                guard self?.walletManager.setRandomSeedPhrase() != nil else { self?.handleWalletCreationError(); return }
+                guard self?.keyMaster.setRandomSeedPhrase() != nil else { self?.handleWalletCreationError(); return }
                 //TODO:BCH multi-currency support
                 UserDefaults.selectedCurrencyCode = nil // to land on home screen after new wallet creation
                 Store.perform(action: WalletChange(Currencies.btc).setWalletCreationDate(Date()))
                 DispatchQueue.main.async {
-                    self?.pushStartPaperPhraseCreationViewController(pin: pin)
+                    self?.pushStartPaperPhraseCreationViewController(pin: pin, eventContext: context)
                     Store.trigger(name: .didCreateOrRecoverWallet)
                 }
             }
         }
 
-        navigationController?.setNavigationBarHidden(false, animated: false)
         navigationController?.setClearNavbar()
+        navigationController?.setNavigationBarHidden(false, animated: false)
         navigationController?.pushViewController(pinCreationViewController, animated: true)
     }
 
@@ -139,48 +218,21 @@ class StartFlowPresenter : Subscriber {
         alert.addAction(UIAlertAction(title: S.Button.ok, style: .default, handler: nil))
         navigationController?.present(alert, animated: true, completion: nil)
     }
-
-    private func pushStartPaperPhraseCreationViewController(pin: String) {
-        let paperPhraseViewController = StartPaperPhraseViewController(callback: { [weak self] in
-            self?.pushWritePaperPhraseViewController(pin: pin)
-        })
-        paperPhraseViewController.title = S.SecurityCenter.Cells.paperKeyTitle
-        paperPhraseViewController.navigationItem.setHidesBackButton(true, animated: false)
-        paperPhraseViewController.navigationItem.leftBarButtonItems = [UIBarButtonItem.negativePadding, UIBarButtonItem(customView: closeButton)]
-
-        let faqButton = UIButton.buildFaqButton(articleId: ArticleIds.paperKey)
-        faqButton.tintColor = .white
-        paperPhraseViewController.navigationItem.rightBarButtonItems = [UIBarButtonItem.negativePadding, UIBarButtonItem(customView: faqButton)]
-
-        navigationController?.navigationBar.titleTextAttributes = [
-            NSAttributedStringKey.foregroundColor: UIColor.white,
-            NSAttributedStringKey.font: UIFont.customBold(size: 17.0)
-        ]
-        navigationController?.pushViewController(paperPhraseViewController, animated: true)
-    }
-
-    private func pushWritePaperPhraseViewController(pin: String) {
-        let writeViewController = WritePaperPhraseViewController(walletManager: walletManager, pin: pin, callback: { [weak self] in
-            self?.pushConfirmPaperPhraseViewController(pin: pin)
-        })
-        writeViewController.title = S.SecurityCenter.Cells.paperKeyTitle
-        writeViewController.navigationItem.leftBarButtonItems = [UIBarButtonItem.negativePadding, UIBarButtonItem(customView: closeButton)]
-        navigationController?.pushViewController(writeViewController, animated: true)
-    }
-
-    private func pushConfirmPaperPhraseViewController(pin: String) {
-        let confirmViewController = ConfirmPaperPhraseViewController(walletManager: walletManager, pin: pin, callback: {
-            Store.perform(action: Alert.Show(.paperKeySet(callback: {
-                Store.perform(action: HideStartFlow())
-            })))
-        })
-        confirmViewController.title = S.SecurityCenter.Cells.paperKeyTitle
-        navigationController?.navigationBar.tintColor = .white
-        navigationController?.pushViewController(confirmViewController, animated: true)
+    
+    private func pushStartPaperPhraseCreationViewController(pin: String, eventContext: EventContext = .none) {
+        guard let navController = navigationController else { return }
+        
+        RecoveryKeyFlowController.enterRecoveryKeyFlow(pin: pin,
+                                                       keyMaster: self.keyMaster,
+                                                       from: navController,
+                                                       context: eventContext,
+                                                       dismissAction: HideStartFlow(),
+                                                       modalPresentation: false,
+                                                       canExit: false)
     }
 
     private func presentLoginFlow(isPresentedForLock: Bool) {
-        let loginView = LoginViewController(isPresentedForLock: isPresentedForLock, walletManager: walletManager)
+        let loginView = LoginViewController(isPresentedForLock: isPresentedForLock, keyMaster: keyMaster)
         loginView.transitioningDelegate = loginTransitionDelegate
         loginView.modalPresentationStyle = .overFullScreen
         loginView.modalPresentationCapturesStatusBarAppearance = true

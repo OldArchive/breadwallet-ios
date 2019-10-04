@@ -8,9 +8,17 @@
 
 import UIKit
 
-class MenuCell : SeparatorCell {
+class MenuCell: SeparatorCell {
     
     static let cellIdentifier = "MenuCell"
+    
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: .subtitle, reuseIdentifier: reuseIdentifier)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
     
     func set(item: MenuItem) {
         textLabel?.text = item.title
@@ -18,16 +26,24 @@ class MenuCell : SeparatorCell {
         textLabel?.textColor = .white
         
         imageView?.image = item.icon
-        imageView?.tintColor = .navigationTint
+        imageView?.tintColor = Theme.accent
         
         if let accessoryText = item.accessoryText?() {
-            let label = UILabel(font: .customMedium(size: 16.0), color: .transparentWhiteText)
+            let label = UILabel(font: Theme.body1, color: Theme.primaryText)
             label.text = accessoryText
             label.sizeToFit()
             accessoryView = label
         } else {
             accessoryView = nil
             accessoryType = .none
+        }
+        
+        if let subTitle = item.subTitle {
+            detailTextLabel?.text = subTitle
+            detailTextLabel?.font = Theme.caption
+            detailTextLabel?.textColor = Theme.secondaryText
+        } else {
+            detailTextLabel?.text = nil
         }
     }
 }

@@ -26,11 +26,10 @@
 import Foundation
 import CoreLocation
 
-
 class BRGeoLocationDelegate: NSObject, CLLocationManagerDelegate {
-    var manager: CLLocationManager? = nil
+    var manager: CLLocationManager?
     var response: BRHTTPResponse
-    var remove: (() -> Void)? = nil
+    var remove: (() -> Void)?
     
     init(response: BRHTTPResponse) {
         self.response = response
@@ -105,11 +104,11 @@ open class BRGeoLocationPlugin: NSObject, BRHTTPRouterPlugin, CLLocationManagerD
         //
         // "user_queried" indicates whether or not the user has already been asked for geolocation
         // "location_enabled" indicates whether or not the user has geo location enabled on their phone
-        router.get("/_permissions/geo") { (request, match) -> BRHTTPResponse in
+        router.get("/_permissions/geo") { (request, _) -> BRHTTPResponse in
             let userDefaults = UserDefaults.standard
-            let authzStatus = CLLocationManager.authorizationStatus()
+            let authStatus = CLLocationManager.authorizationStatus()
             var retJson = [String: Any]()
-            switch authzStatus {
+            switch authStatus {
             case .denied:
                 retJson["status"] = "denied"
             case .restricted:
@@ -120,6 +119,9 @@ open class BRGeoLocationPlugin: NSObject, BRHTTPRouterPlugin, CLLocationManagerD
                 retJson["status"] = "inuse"
             case .authorizedAlways:
                 retJson["status"] = "always"
+            @unknown default:
+                assertionFailure("unknown location auth status")
+                retJson["status"] = "undetermined"
             }
             retJson["user_queried"] = userDefaults.bool(forKey: "geo_permission_was_queried")
             retJson["location_enabled"] = CLLocationManager.locationServicesEnabled()
@@ -134,8 +136,8 @@ open class BRGeoLocationPlugin: NSObject, BRHTTPRouterPlugin, CLLocationManagerD
         // two ways the user can authorize geo access to the app. "inuse" will request
         // geo availability to the app when the app is foregrounded, and "always" will request
         // full time geo availability to the app
-        router.post("/_permissions/geo") { (request, match) -> BRHTTPResponse in
-            if let j = request.json(), let dict = j as? NSDictionary, let _ = dict["style"] as? String {
+        router.post("/_permissions/geo") { (request, _) -> BRHTTPResponse in
+            if let j = request.json(), let dict = j as? NSDictionary, dict["style"] is String {
                 return BRHTTPResponse(request: request, code: 500) // deprecated
             }
             return BRHTTPResponse(request: request, code: 400)
@@ -154,7 +156,7 @@ open class BRGeoLocationPlugin: NSObject, BRHTTPRouterPlugin, CLLocationManagerD
         // "description" = "a string representation of this object"
         // "timestamp" = "ISO-8601 timestamp of when this location was generated"
         // "horizontal_accuracy" = double
-        router.get("/_geo") { (request, match) -> BRHTTPResponse in
+        router.get("/_geo") { (request, _) -> BRHTTPResponse in
             if let authzErr = self.getAuthorizationError() {
                 return try BRHTTPResponse(request: request, code: 400, json: authzErr)
             }
@@ -162,7 +164,7 @@ open class BRGeoLocationPlugin: NSObject, BRHTTPRouterPlugin, CLLocationManagerD
             let del = BRGeoLocationDelegate(response: resp)
             del.remove = {
                 objc_sync_enter(self)
-                if let idx = self.outstanding.index(where: { (d) -> Bool in return d == del }) {
+                if let idx = self.outstanding.firstIndex(where: { (d) -> Bool in return d == del }) {
                     self.outstanding.remove(at: idx)
                 }
                 objc_sync_exit(self)
@@ -274,7 +276,7 @@ open class BRGeoLocationPlugin: NSObject, BRHTTPRouterPlugin, CLLocationManagerD
         print("LOCATION SOCKET DISCONNECT \(socket.id)")
         sockets.removeValue(forKey: socket.id)
         // on last socket disconnect stop updating location
-        if sockets.count == 0 {
+        if sockets.isEmpty {
             isUpdatingSockets = false
             lastLocation = nil
             self.manager.stopUpdatingLocation()

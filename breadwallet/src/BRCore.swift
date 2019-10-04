@@ -112,9 +112,9 @@ extension BRAddress: CustomStringConvertible, Hashable {
     public var description: String {
         return String(cString: UnsafeRawPointer([self.s]).assumingMemoryBound(to: CChar.self))
     }
-    
-    public var hashValue: Int {
-        return BRAddressHash([self.s])
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(BRAddressHash([self.s]))
     }
     
     static public func == (l: BRAddress, r: BRAddress) -> Bool {
@@ -160,7 +160,7 @@ extension BRKey {
             let count = BRKeyPrivKey(&self, nil, 0)
             var data = CFDataCreateMutable(secureAllocator, count) as Data
             data.count = count
-            guard data.withUnsafeMutableBytes({ BRKeyPrivKey(&self, $0, count) }) != 0 else { return nil }
+            guard data.withUnsafeMutableBytes({ BRKeyPrivKey(&self, $0.baseAddress?.assumingMemoryBound(to: Int8.self), count) }) != 0 else { return nil }
             return CFStringCreateFromExternalRepresentation(secureAllocator, data as CFData,
                                                             CFStringBuiltInEncodings.UTF8.rawValue) as String
         }
@@ -175,7 +175,7 @@ extension BRKey {
             let count = BRKeyBIP38Key(&self, nil, 0, nfcPhrase as String)
             var data = CFDataCreateMutable(secureAllocator, count) as Data
             data.count = count
-            guard data.withUnsafeMutableBytes({ BRKeyBIP38Key(&self, $0, count, nfcPhrase as String) }) != 0
+            guard data.withUnsafeMutableBytes({ BRKeyBIP38Key(&self, $0.baseAddress?.assumingMemoryBound(to: Int8.self), count, nfcPhrase as String) }) != 0
                 else { return nil }
             return CFStringCreateFromExternalRepresentation(secureAllocator, data as CFData,
                                                             CFStringBuiltInEncodings.UTF8.rawValue) as String
@@ -193,9 +193,9 @@ extension BRKey {
     public var publicKey: Data {
         var k = self
         let len = BRKeyPubKey(&k, nil, 0)
-        var data = Data(count: len)
-        BRKeyPubKey(&k, data.withUnsafeMutableBytes({ (d: UnsafeMutablePointer<UInt8>) -> UnsafeMutablePointer<UInt8> in d }), len)
-        return data
+        var result = [UInt8](repeating: 0, count: len)
+        BRKeyPubKey(&k, &result, len)
+        return Data(result)
     }
     
     // ripemd160 hash of the sha256 hash of the public key
@@ -383,9 +383,9 @@ protocol BRWalletListener {
 class BRWallet {
     let cPtr: OpaquePointer
     let listener: BRWalletListener
-    let currency: CurrencyDef
+    let currency: Currency
     
-    init?(transactions: [BRTxRef?], masterPubKey: BRMasterPubKey, listener: BRWalletListener, currency: CurrencyDef) {
+    init?(transactions: [BRTxRef?], masterPubKey: BRMasterPubKey, listener: BRWalletListener, currency: Currency) {
         guard let currency = currency as? Bitcoin else { assertionFailure(); return nil }
         var txRefs = transactions
         guard let cPtr = BRWalletNew(&txRefs, txRefs.count, masterPubKey, Int32(currency.forkId)) else { return nil }
@@ -577,13 +577,13 @@ protocol BRPeerManagerListener {
 class BRPeerManager {
     let cPtr: OpaquePointer
     let listener: BRPeerManagerListener
-    let mainNetParams = [BRMainNetParams]
-    let bcashParams = [BRBCashParams]
-    let testNetParams = [BRTestNetParams]
-    let bcashTestNetParams = [BRBCashTestNetParams]
-    let currency: CurrencyDef
+    let mainNetParams = BRMainNetParams
+    let bcashParams = BRBCashParams
+    let testNetParams = BRTestNetParams
+    let bcashTestNetParams = BRBCashTestNetParams
+    let currency: Currency
 
-    init?(currency: CurrencyDef, wallet: BRWallet, earliestKeyTime: TimeInterval, blocks: [BRBlockRef?], peers: [BRPeer],
+    init?(currency: Currency, wallet: BRWallet, earliestKeyTime: TimeInterval, blocks: [BRBlockRef?], peers: [BRPeer],
           listener: BRPeerManagerListener) {
         var blockRefs = blocks
         guard let cPtr = BRPeerManagerNew(currency.code == Currencies.btc.code ? (E.isTestnet ? testNetParams: mainNetParams) : (E.isTestnet ? bcashTestNetParams : bcashParams),
@@ -736,20 +736,6 @@ class BRPeerManager {
             self.completion = completion
         }
     }
-
-    //hack to keep the swift compiler happy
-    let a = BRBCashCheckpoints
-    let b = BRBCashDNSSeeds
-    let c = BRBCashVerifyDifficulty
-    let d = BRBCashTestNetCheckpoints
-    let e = BRBCashTestNetDNSSeeds
-    let f = BRBCashTestNetVerifyDifficulty
-    let g = BRMainNetDNSSeeds
-    let h = BRMainNetCheckpoints
-    let i = BRMainNetVerifyDifficulty
-    let j = BRTestNetDNSSeeds
-    let k = BRTestNetCheckpoints
-    let l = BRTestNetVerifyDifficulty
 }
 
 extension UInt256 : CustomStringConvertible {    
@@ -838,6 +824,10 @@ extension UInt256 {
     
     public static func += (l: inout UInt256, r: UInt256) {
         l = l + r
+    }
+
+    public static func -= (l: inout UInt256, r: UInt256) {
+        l = l - r
     }
 }
 

@@ -33,7 +33,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     let applicationController = ApplicationController()
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         redirectStdOut()
         UIView.swizzleSetFrame()
         applicationController.launch(application: application, options: launchOptions)
@@ -61,7 +61,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         applicationController.performFetch(completionHandler)
     }
 
-    func application(_ application: UIApplication, shouldAllowExtensionPointIdentifier extensionPointIdentifier: UIApplicationExtensionPointIdentifier) -> Bool {
+    func application(_ application: UIApplication, shouldAllowExtensionPointIdentifier extensionPointIdentifier: UIApplication.ExtensionPointIdentifier) -> Bool {
         return false // disable extensions such as custom keyboards for security purposes
     }
 
@@ -73,20 +73,33 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         applicationController.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
     }
 
-    func application(_ app: UIApplication, open url: URL, options: [UIApplicationOpenURLOptionsKey : Any] = [:]) -> Bool {
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         return applicationController.open(url: url)
     }
     
-    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]?) -> Void) -> Bool {
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         return applicationController.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
-    //stdout is redirected to C.logFilePath for testflight builds
+    // stdout is redirected to C.logFilePath for testflight and debug builds
     private func redirectStdOut() {
         guard E.isTestFlight else { return }
+        
+        let logFilePath = C.logFilePath
+        let previousLogFilePath = C.previousLogFilePath
+        
+        // If there is already content at C.logFilePath from the previous run of the app,
+        // store that content in C.previousLogFilePath so that we can upload both the previous
+        // and current log from Menu / Developer / Send Logs.
+        if FileManager.default.fileExists(atPath: logFilePath.path) {
+            // save the logging data from the previous run of the app
+            if let logData = try? Data(contentsOf: C.logFilePath) {
+                try? logData.write(to: previousLogFilePath, options: Data.WritingOptions.atomic)
+            }
+        }
+        
         C.logFilePath.withUnsafeFileSystemRepresentation {
             _ = freopen($0, "w+", stdout)
         }
     }
 }
-

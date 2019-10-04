@@ -13,6 +13,8 @@
 			<array/>
 			<key>CFBundleTypeName</key>
 			<string>Bitcoin Payment Request</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>bitcoin.paymentrequest</string>
@@ -23,6 +25,8 @@
 			<array/>
 			<key>CFBundleTypeName</key>
 			<string>Bitcoin Payment</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>bitcoin.payment</string>
@@ -33,6 +37,8 @@
 			<array/>
 			<key>CFBundleTypeName</key>
 			<string>Bitcoin Payment ACK</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>bitcoin.paymentack</string>
@@ -50,7 +56,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.5.2</string>
+	<string>3.16</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -88,7 +94,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>org.voisine.bread</string>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>bread</string>
@@ -106,7 +112,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>366</string>
+	<string>3</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -141,7 +147,7 @@
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UIRequiresFullScreen</key>
 	<true/>

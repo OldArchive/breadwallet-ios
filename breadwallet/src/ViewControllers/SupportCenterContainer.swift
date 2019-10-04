@@ -8,21 +8,23 @@
 
 import UIKit
 
-class SupportCenterContainer : UIViewController {
+class SupportCenterContainer: UIViewController {
 
     func navigate(to: String) {
         webView.navigate(to: to)
     }
 
-    init(walletManagers: [String: WalletManager]) {
+    init(walletAuthenticator: TransactionAuthenticator, walletManagers: [String: WalletManager]) {
         let mountPoint = "/support"
-        webView = BRWebViewController(bundleName: C.webBundle, mountPoint: mountPoint, walletManagers: walletManagers)
-        webView.startServer()
-        webView.preload()
+        webView = BRWebViewController(bundleName: C.webBundle,
+                                      mountPoint: mountPoint,
+                                      walletAuthenticator: walletAuthenticator,
+                                      walletManagers: walletManagers)
         super.init(nibName: nil, bundle: nil)
+        loadWebView()
     }
 
-    private let webView: BRWebViewController
+    private var webView: BRWebViewController
     let blur = UIVisualEffectView()
 
     override func viewDidLoad() {
@@ -30,11 +32,18 @@ class SupportCenterContainer : UIViewController {
         addChildViewController(webView, layout: {
             webView.view.constrain([
                 webView.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-                webView.view.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
+                webView.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
                 webView.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-                webView.view.bottomAnchor.constraint(equalTo: bottomLayoutGuide.topAnchor) ])
+                webView.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor) ])
         })
         addTopCorners()
+    }
+
+    func loadWebView() {
+        webView.stopServer()
+        webView.bundleName = C.webBundle // reset in case of developer override
+        webView.startServer()
+        webView.preload()
     }
 
     private func addTopCorners() {
@@ -53,7 +62,7 @@ class SupportCenterContainer : UIViewController {
     }
 }
 
-extension SupportCenterContainer : UIViewControllerTransitioningDelegate {
+extension SupportCenterContainer: UIViewControllerTransitioningDelegate {
     func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         return DismissSupportCenterAnimator()
     }
@@ -63,7 +72,7 @@ extension SupportCenterContainer : UIViewControllerTransitioningDelegate {
     }
 }
 
-class PresentSupportCenterAnimator : NSObject, UIViewControllerAnimatedTransitioning {
+class PresentSupportCenterAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
         return 0.4
     }
@@ -82,7 +91,6 @@ class PresentSupportCenterAnimator : NSObject, UIViewControllerAnimatedTransitio
         toView.frame = toView.frame.offsetBy(dx: 0, dy: toView.frame.height)
         container.addSubview(toView)
 
-
         UIView.spring(duration, animations: {
             blur.effect = UIBlurEffect(style: .dark)
             toView.frame = finalToViewFrame
@@ -93,7 +101,7 @@ class PresentSupportCenterAnimator : NSObject, UIViewControllerAnimatedTransitio
     }
 }
 
-class DismissSupportCenterAnimator : NSObject, UIViewControllerAnimatedTransitioning {
+class DismissSupportCenterAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
         return 0.4
     }
@@ -102,7 +110,8 @@ class DismissSupportCenterAnimator : NSObject, UIViewControllerAnimatedTransitio
         guard transitionContext.isAnimated else { return }
         let duration = transitionDuration(using: transitionContext)
         guard let fromView = transitionContext.view(forKey: .from) else { assert(false, "Missing from view"); return }
-        guard let fromViewController = transitionContext.viewController(forKey: .from) as? SupportCenterContainer else { assert(false, "Missing to view controller"); return }
+        guard let fromViewController = transitionContext.viewController(forKey: .from) as? SupportCenterContainer
+            else { assert(false, "Missing to view controller"); return }
         let originalFrame = fromView.frame
         UIView.animate(withDuration: duration, animations: {
             fromViewController.blur.effect = nil

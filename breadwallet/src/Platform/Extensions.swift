@@ -28,11 +28,10 @@ import BRCore
 import libbz2
 import UIKit
 
-
 public extension String {
     static func buildQueryString(_ options: [String: [String]]?, includeQ: Bool = false) -> String {
         var s = ""
-        if let options = options , options.count > 0 {
+        if let options = options, !options.isEmpty {
             s = includeQ ? "?" : ""
             var i = 0
             for (k, vals) in options {
@@ -57,30 +56,27 @@ public extension String {
     }
     
     func md5() -> String {
-        guard let data = self.data(using: .utf8) else {
+        guard let stringData = self.data(using: .utf8) else {
             assert(false, "couldnt encode string as utf8 data")
             return ""
         }
         
-        var result = Data(count: 128/8)
+        var data = [UInt8](stringData)
+        var result = [UInt8](repeating: 0, count: 128/8)
         let resultCount = result.count
-        return result.withUnsafeMutableBytes { (resultBytes: UnsafeMutablePointer<CUnsignedChar>) -> String in
-            data.withUnsafeBytes { (dataBytes) -> Void in
-                BRMD5(resultBytes, dataBytes, data.count)
-            }
-            var hash = String()
-            for i in 0..<resultCount {
-                hash = hash.appendingFormat("%02x", resultBytes[i])
-            }
-            return hash
+        BRMD5(&result, &data, data.count)
+        var hash = String()
+        for i in 0..<resultCount {
+            hash = hash.appendingFormat("%02x", result[i])
         }
+        return hash
     }
     
     func base58DecodedData() -> Data {
         let len = BRBase58Decode(nil, 0, self)
-        var data = Data(count: len)
-        _ = data.withUnsafeMutableBytes({ BRBase58Decode($0, len, self) })
-        return data
+        var data = [UInt8](repeating: 0, count: len)
+        BRBase58Decode(&data, len, self)
+        return Data(data)
     }
     
     var urlEscapedString: String {
@@ -128,23 +124,20 @@ let VAR_INT64_HEADER: UInt64 = 0xff
 extension NSMutableData {
 
     func appendVarInt(i: UInt64) {
-        if (i < VAR_INT16_HEADER) {
+        if i < VAR_INT16_HEADER {
             var payload = UInt8(i)
             append(&payload, length: MemoryLayout<UInt8>.size)
-        }
-        else if (Int32(i) <= UINT16_MAX) {
+        } else if Int32(i) <= UINT16_MAX {
             var header = UInt8(VAR_INT16_HEADER)
             var payload = CFSwapInt16HostToLittle(UInt16(i))
             append(&header, length: MemoryLayout<UInt8>.size)
             append(&payload, length: MemoryLayout<UInt16>.size)
-        }
-        else if (UInt32(i) <= UINT32_MAX) {
+        } else if UInt32(i) <= UINT32_MAX {
             var header = UInt8(VAR_INT32_HEADER)
             var payload = CFSwapInt32HostToLittle(UInt32(i))
             append(&header, length: MemoryLayout<UInt8>.size)
             append(&payload, length: MemoryLayout<UInt32>.size)
-        }
-        else {
+        } else {
             var header = UInt8(VAR_INT64_HEADER)
             var payload = CFSwapInt64HostToLittle(i)
             append(&header, length: MemoryLayout<UInt8>.size)
@@ -181,47 +174,45 @@ public extension Data {
     }
 
     var bzCompressedData: Data? {
-        get {
-            guard !self.isEmpty else {
-                return self
+        guard !self.isEmpty else {
+            return self
+        }
+
+        var compressed = Data()
+        var stream = bz_stream()
+        var mself = self
+        var success = true
+        mself.withUnsafeMutableBytes { (selfBuff: UnsafeMutableRawBufferPointer) -> Void in
+            let outBuff = UnsafeMutablePointer<Int8>.allocate(capacity: Int(BZCompressionBufferSize))
+            defer { outBuff.deallocate() }
+
+            stream.next_in = selfBuff.baseAddress?.assumingMemoryBound(to: Int8.self)
+            stream.avail_in = UInt32(self.count)
+            stream.next_out = outBuff
+            stream.avail_out = BZCompressionBufferSize
+
+            var bzret = BZ2_bzCompressInit(&stream, BZDefaultBlockSize, 0, BZDefaultWorkFactor)
+            guard bzret == BZ_OK else {
+                print("failed compression init")
+                success = false
+                return
             }
-            
-            var compressed = Data()
-            var stream = bz_stream()
-            var mself = self
-            var success = true
-            mself.withUnsafeMutableBytes { (selfBuff: UnsafeMutablePointer<Int8>) -> Void in
-                let outBuff = UnsafeMutablePointer<Int8>.allocate(capacity: Int(BZCompressionBufferSize))
-                defer { outBuff.deallocate() }
-                
-                stream.next_in = selfBuff
-                stream.avail_in = UInt32(self.count)
-                stream.next_out = outBuff
-                stream.avail_out = BZCompressionBufferSize
-                
-                var bzret = BZ2_bzCompressInit(&stream, BZDefaultBlockSize, 0, BZDefaultWorkFactor)
-                guard bzret == BZ_OK else {
-                    print("failed compression init")
+            repeat {
+                bzret = BZ2_bzCompress(&stream, stream.avail_in > 0 ? BZ_RUN : BZ_FINISH)
+                guard bzret >= BZ_OK else {
+                    print("failed compress")
                     success = false
                     return
                 }
-                repeat {
-                    bzret = BZ2_bzCompress(&stream, stream.avail_in > 0 ? BZ_RUN : BZ_FINISH)
-                    guard bzret >= BZ_OK else {
-                        print("failed compress")
-                        success = false
-                        return
-                    }
-                    let bpp = UnsafeBufferPointer(start: outBuff, count: (Int(BZCompressionBufferSize) - Int(stream.avail_out)))
-                    compressed.append(bpp)
-                    stream.next_out = outBuff
-                    stream.avail_out = BZCompressionBufferSize
-                } while bzret != BZ_STREAM_END
-            }
-            BZ2_bzCompressEnd(&stream)
-            guard success else { return nil }
-            return compressed
+                let bpp = UnsafeBufferPointer(start: outBuff, count: (Int(BZCompressionBufferSize) - Int(stream.avail_out)))
+                compressed.append(bpp)
+                stream.next_out = outBuff
+                stream.avail_out = BZCompressionBufferSize
+            } while bzret != BZ_STREAM_END
         }
+        BZ2_bzCompressEnd(&stream)
+        guard success else { return nil }
+        return compressed
     }
 
     init?(bzCompressedData data: Data) {
@@ -232,11 +223,11 @@ public extension Data {
         var decompressed = Data()
         var myDat = data
         var success = true
-        myDat.withUnsafeMutableBytes { (datBuff: UnsafeMutablePointer<Int8>) -> Void in
+        myDat.withUnsafeMutableBytes { (datBuff: UnsafeMutableRawBufferPointer) -> Void in
             let outBuff = UnsafeMutablePointer<Int8>.allocate(capacity: Int(BZCompressionBufferSize))
             defer { outBuff.deallocate() }
             
-            stream.next_in = datBuff
+            stream.next_in = datBuff.baseAddress?.assumingMemoryBound(to: Int8.self)
             stream.avail_in = UInt32(data.count)
             stream.next_out = outBuff
             stream.avail_out = BZCompressionBufferSize
@@ -266,34 +257,30 @@ public extension Data {
     }
     
     var base58: String {
-        return self.withUnsafeBytes { (selfBytes: UnsafePointer<UInt8>) -> String in
-            let len = BRBase58Encode(nil, 0, selfBytes, self.count)
+        return self.withUnsafeBytes {
+            let bytes = $0.baseAddress?.assumingMemoryBound(to: UInt8.self)
+            let len = BRBase58Encode(nil, 0, bytes, self.count)
             var data = Data(count: len)
-            return data.withUnsafeMutableBytes { (b: UnsafeMutablePointer<Int8>) in
-                BRBase58Encode(b, len, selfBytes, self.count)
-                return String(cString: b)
+            return data.withUnsafeMutableBytes {
+                guard let outBuf = $0.baseAddress?.assumingMemoryBound(to: Int8.self) else { assertionFailure(); return "" }
+                BRBase58Encode(outBuf, len, bytes, self.count)
+                return String(cString: outBuf)
             }
         }
     }
 
     var sha1: Data {
-        var data = Data(count: 20)
-        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) in
-            self.withUnsafeBytes({ (selfBytes: UnsafePointer<UInt8>) in
-                BRSHA1(bytes, selfBytes, self.count)
-            })
-        }
-        return data
+        var result = [UInt8](repeating: 0, count: 20)
+        var myself = [UInt8](self)
+        BRSHA1(&result, &myself, self.count)
+        return Data(result)
     }
     
     var sha256: Data {
-        var data = Data(count: 32)
-        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) in
-            self.withUnsafeBytes({ (selfBytes: UnsafePointer<UInt8>) in
-                BRSHA256(bytes, selfBytes, self.count)
-            })
-        }
-        return data
+        var result = [UInt8](repeating: 0, count: 32)
+        var myself = [UInt8](self)
+        BRSHA256(&result, &myself, count)
+        return Data(result)
     }
 
     var sha256_2: Data {
@@ -301,45 +288,43 @@ public extension Data {
     }
     
     var uInt256: UInt256 {
-        return self.withUnsafeBytes { (ptr: UnsafePointer<UInt256>) -> UInt256 in
-            return ptr.pointee
+        return self.withUnsafeBytes {
+            return $0.load(as: UInt256.self)
         }
     }
     
-    public func uInt8(atOffset offset: UInt) -> UInt8 {
+    func uInt8(atOffset offset: UInt) -> UInt8 {
         let offt = Int(offset)
         let size = MemoryLayout<UInt8>.size
         if self.count < offt + size { return 0 }
-        return self.subdata(in: offt..<(offt+size)).withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> UInt8 in
-            return ptr.pointee
+        return self.subdata(in: offt..<(offt+size)).withUnsafeBytes {
+            return $0.load(as: UInt8.self)
         }
     }
     
-    public func uInt32(atOffset offset: UInt) -> UInt32 {
+    func uInt32(atOffset offset: UInt) -> UInt32 {
         let offt = Int(offset)
         let size = MemoryLayout<UInt32>.size
         if self.count < offt + size { return 0 }
-        return self.subdata(in: offt..<(offt+size)).withUnsafeBytes { (ptr: UnsafePointer<UInt32>) -> UInt32 in
-            return CFSwapInt32LittleToHost(ptr.pointee)
+        return self.subdata(in: offt..<(offt+size)).withUnsafeBytes {
+            return CFSwapInt32LittleToHost($0.load(as: UInt32.self))
         }
     }
     
-    public func uInt64(atOffset offset: UInt) -> UInt64 {
+    func uInt64(atOffset offset: UInt) -> UInt64 {
         let offt = Int(offset)
         let size = MemoryLayout<UInt64>.size
         if self.count < offt + size { return 0 }
-        return self.subdata(in: offt..<(offt+size)).withUnsafeBytes { (ptr: UnsafePointer<UInt64>) -> UInt64 in
-            return CFSwapInt64LittleToHost(ptr.pointee)
+        return self.subdata(in: offt..<(offt+size)).withUnsafeBytes {
+            return CFSwapInt64LittleToHost($0.load(as: UInt64.self))
         }
     }
 
-    public func compactSign(key: BRKey) -> Data {
-        return self.withUnsafeBytes({ (selfBytes: UnsafePointer<UInt8>) -> Data in
-            var data = Data(count: 65)
-            var k = key
-            _ = data.withUnsafeMutableBytes({ BRKeyCompactSign(&k, $0, 65, self.uInt256) })
-            return data
-        })
+    func compactSign(key: BRKey) -> Data {
+        var result = [UInt8](repeating: 0, count: 65)
+        var k = key
+        BRKeyCompactSign(&k, &result, 65, self.uInt256)
+        return Data(result)
     }
 
     fileprivate func genNonce() -> [UInt8] {
@@ -347,13 +332,12 @@ public extension Data {
         gettimeofday(&tv, nil)
         var t = UInt64(tv.tv_usec) * 1_000_000 + UInt64(tv.tv_usec)
         let p = [UInt8](repeating: 0, count: 4)
-        return Data(bytes: &t, count: MemoryLayout<UInt64>.size).withUnsafeBytes { (dat: UnsafePointer<UInt8>) -> [UInt8] in
-            let buf = UnsafeBufferPointer(start: dat, count: MemoryLayout<UInt64>.size)
-            return p + Array(buf)
+        return Data(bytes: &t, count: MemoryLayout<UInt64>.size).withUnsafeBytes {
+            return p + Array($0)
         }
     }
     
-    public func chacha20Poly1305AEADEncrypt(key: BRKey) -> Data {
+    func chacha20Poly1305AEADEncrypt(key: BRKey) -> Data {
         let data = [UInt8](self)
         let inData = UnsafePointer<UInt8>(data)
         let nonce = genNonce()
@@ -367,7 +351,7 @@ public extension Data {
         }
     }
     
-    public func chacha20Poly1305AEADDecrypt(key: BRKey) throws -> Data {
+    func chacha20Poly1305AEADDecrypt(key: BRKey) throws -> Data {
         let data = [UInt8](self)
         guard data.count > 12 else { throw BRReplicatedKVStoreError.malformedData }
         let nonce = Array(data[data.startIndex...data.startIndex.advanced(by: 12)])
@@ -383,11 +367,15 @@ public extension Data {
     }
 
     var masterPubKey: BRMasterPubKey? {
+        typealias PubKeyType = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+                                UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+                                UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+                                UInt8, UInt8, UInt8) //uint8_t pubKey[33];
         guard self.count >= (4 + 32 + 33) else { return nil }
         var mpk = BRMasterPubKey()
-        mpk.fingerPrint = self.subdata(in: 0..<4).withUnsafeBytes { $0.pointee }
-        mpk.chainCode = self.subdata(in: 4..<(4 + 32)).withUnsafeBytes { $0.pointee }
-        mpk.pubKey = self.subdata(in: (4 + 32)..<(4 + 32 + 33)).withUnsafeBytes { $0.pointee }
+        mpk.fingerPrint = self.subdata(in: 0..<4).withUnsafeBytes { $0.load(as: UInt32.self) }
+        mpk.chainCode = self.subdata(in: 4..<(4 + 32)).withUnsafeBytes { $0.load(as: UInt256.self) }
+        mpk.pubKey = self.subdata(in: (4 + 32)..<(4 + 32 + 33)).withUnsafeBytes { $0.load(as: PubKeyType.self) }
         return mpk
     }
 
@@ -397,7 +385,7 @@ public extension Data {
         [mpk.pubKey].withUnsafeBufferPointer { data.append($0) }
         self.init(data)
     }
-    
+
     var urlEncodedObject: [String: [String]]? {
         guard let str = String(data: self, encoding: .utf8) else {
             return nil
@@ -423,10 +411,9 @@ public extension Date {
     // Copyright © 2015 Foster Yin. All rights reserved.
     fileprivate static func cachedThreadLocalObjectWithKey<T: AnyObject>(_ key: String, create: () -> T) -> T {
         let threadDictionary = Thread.current.threadDictionary
-        if let cachedObject = threadDictionary[key] as! T? {
+        if let cachedObject = threadDictionary[key] as? T {
             return cachedObject
-        }
-        else {
+        } else {
             let newObject = create()
             threadDictionary[key] = newObject
             return newObject
@@ -559,10 +546,8 @@ extension Dictionary where Key: ExpressibleByStringLiteral, Value: Any {
     var flattened: [Key: String] {
         var ret = [Key: String]()
         for (k, v) in self {
-            if let v = v as? [String] {
-                if v.count > 0 {
-                    ret[k] = v[0]
-                }
+            if let v = v as? [String], !v.isEmpty {
+                ret[k] = v[0]
             }
         }
         return ret
@@ -576,6 +561,20 @@ extension Dictionary where Key: ExpressibleByStringLiteral, Value: Any {
             return "null"
         }
         return jstring
+    }
+}
+
+extension Array {
+    func chunked(by chunkSize: Int) -> [[Element]] {
+        return stride(from: 0, to: count, by: chunkSize).map {
+            Array(self[$0..<Swift.min($0 + chunkSize, count)])
+        }
+    }
+}
+
+extension Result where Success == Void {
+    static var success: Result {
+        return .success(())
     }
 }
 
@@ -609,8 +608,7 @@ typealias Quintet = UInt8
 typealias EncodedChar = UInt8
 
 func quintetsFromBytes(_ firstByte: Byte, _ secondByte: Byte, _ thirdByte: Byte, _ fourthByte: Byte, _ fifthByte: Byte)
-    -> (Quintet, Quintet, Quintet, Quintet, Quintet, Quintet, Quintet, Quintet)
-{
+    -> (Quintet, Quintet, Quintet, Quintet, Quintet, Quintet, Quintet, Quintet) {
     return (
         firstQuintet(firstByte: firstByte),
         secondQuintet(firstByte: firstByte, secondByte: secondByte),
@@ -624,8 +622,7 @@ func quintetsFromBytes(_ firstByte: Byte, _ secondByte: Byte, _ thirdByte: Byte,
 }
 
 func quintetsFromBytes(_ firstByte: Byte, _ secondByte: Byte, _ thirdByte: Byte, _ fourthByte: Byte)
-    -> (Quintet, Quintet, Quintet, Quintet, Quintet, Quintet, Quintet)
-{
+    -> (Quintet, Quintet, Quintet, Quintet, Quintet, Quintet, Quintet) {
     return (
         firstQuintet(firstByte: firstByte),
         secondQuintet(firstByte: firstByte, secondByte: secondByte),
@@ -638,8 +635,7 @@ func quintetsFromBytes(_ firstByte: Byte, _ secondByte: Byte, _ thirdByte: Byte,
 }
 
 func quintetsFromBytes(_ firstByte: Byte, _ secondByte: Byte, _ thirdByte: Byte)
-    -> (Quintet, Quintet, Quintet, Quintet, Quintet)
-{
+    -> (Quintet, Quintet, Quintet, Quintet, Quintet) {
     return (
         firstQuintet(firstByte: firstByte),
         secondQuintet(firstByte: firstByte, secondByte: secondByte),
@@ -650,8 +646,7 @@ func quintetsFromBytes(_ firstByte: Byte, _ secondByte: Byte, _ thirdByte: Byte)
 }
 
 func quintetsFromBytes(_ firstByte: Byte, _ secondByte: Byte)
-    -> (Quintet, Quintet, Quintet, Quintet)
-{
+    -> (Quintet, Quintet, Quintet, Quintet) {
     return (
         firstQuintet(firstByte: firstByte),
         secondQuintet(firstByte: firstByte, secondByte: secondByte),
@@ -661,8 +656,7 @@ func quintetsFromBytes(_ firstByte: Byte, _ secondByte: Byte)
 }
 
 func quintetsFromBytes(_ firstByte: Byte)
-    -> (Quintet, Quintet)
-{
+    -> (Quintet, Quintet) {
     return (
         firstQuintet(firstByte: firstByte),
         secondQuintet(firstByte: firstByte, secondByte: 0)
@@ -812,7 +806,8 @@ public enum Base32 {
         let encodedByteCount = byteCount(encoding: unencodedByteCount)
         let encodedBytes = UnsafeMutablePointer<EncodedChar>.allocate(capacity: encodedByteCount)
         
-        data.withUnsafeBytes { (unencodedBytes: UnsafePointer<Byte>) in
+        data.withUnsafeBytes {
+            guard let unencodedBytes = $0.baseAddress?.assumingMemoryBound(to: Byte.self) else { return }
             var encodedWriteOffset = 0
             for unencodedReadOffset in stride(from: 0, to: unencodedByteCount, by: unencodedBlockSize) {
                 let nextBlockBytes = unencodedBytes + unencodedReadOffset

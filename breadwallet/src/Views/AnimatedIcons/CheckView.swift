@@ -8,9 +8,9 @@
 
 import UIKit
 
-class CheckView : UIView, AnimatableIcon {
+class CheckView: UIView, AnimatableIcon {
 
-    public func animate() {
+    func startAnimating() {
         let check = UIBezierPath()
         check.move(to: CGPoint(x: 32.5, y: 47.0))
         check.addLine(to: CGPoint(x: 43.0, y: 57.0))
@@ -23,20 +23,24 @@ class CheckView : UIView, AnimatableIcon {
         shape.fillColor = UIColor.clear.cgColor
         shape.strokeStart = 0.0
         shape.strokeEnd = 0.0
-        shape.lineCap = "round"
-        shape.lineJoin = "round"
+        shape.lineCap = CAShapeLayerLineCap.round
+        shape.lineJoin = CAShapeLayerLineJoin.round
         layer.addSublayer(shape)
 
         let animation = CABasicAnimation(keyPath: "strokeEnd")
         animation.toValue = 1.0
         animation.isRemovedOnCompletion = false
-        animation.fillMode = kCAFillModeForwards
-        animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionDefault)
+        animation.fillMode = CAMediaTimingFillMode.forwards
+        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.default)
         animation.duration = 0.3
 
         shape.add(animation, forKey: nil)
     }
 
+    func stopAnimating() {
+        
+    }
+    
     override func draw(_ rect: CGRect) {
 
         let checkcircle = UIBezierPath()

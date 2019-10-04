@@ -13,10 +13,10 @@ import BRCore
 // MARK: Types/Constants
 
 enum SendResult {
-    case success(String?, String?) // tx hash, raw tx data
-    case creationError(String)
-    case publishFailure(BRPeerManagerError)
-    case insufficientGas(String) // for ERC20 token transfers
+    case success(hash: String?, rawTx: String?)
+    case creationError(message: String)
+    case publishFailure(code: Int, message: String)
+    case insufficientGas(message: String)
 }
 
 enum SenderValidationResult {
@@ -50,7 +50,7 @@ protocol Sender: class {
     
     var canUseBiometrics: Bool { get }
 
-    func updateFeeRates(_ fees: Fees, level: FeeLevel?)
+    func updateFeeRates(_ fees: Fees, toLevel: FeeLevel?)
     func fee(forAmount: UInt256) -> UInt256?
     
     func validate(paymentRequest: PaymentProtocolRequest, ignoreUsedAddress: Bool, ignoreIdentityNotCertified: Bool) -> SenderValidationResult
@@ -76,8 +76,9 @@ protocol GasEstimator {
 }
 // MARK: - Base Class
 
-class SenderBase<CurrencyType: CurrencyDef, WalletType: WalletManager> {
-    
+class SenderBase<CurrencyType: Currency, WalletType: WalletManager> {
+
+    fileprivate let authenticator: TransactionAuthenticator
     fileprivate let currency: CurrencyType
     fileprivate let walletManager: WalletType
     fileprivate let kvStore: BRReplicatedKVStore
@@ -86,7 +87,8 @@ class SenderBase<CurrencyType: CurrencyDef, WalletType: WalletManager> {
     
     // MARK: Init
     
-    fileprivate init(currency: CurrencyType, walletManager: WalletType, kvStore: BRReplicatedKVStore) {
+    fileprivate init(authenticator: TransactionAuthenticator, currency: CurrencyType, walletManager: WalletType, kvStore: BRReplicatedKVStore) {
+        self.authenticator = authenticator
         self.currency = currency
         self.walletManager = walletManager
         self.kvStore = kvStore
@@ -115,12 +117,12 @@ class BitcoinSender: SenderBase<Bitcoin, BTCWalletManager>, Sender {
     // MARK: Sender
     
     var canUseBiometrics: Bool {
-        guard let tx = transaction else { return false }
-        return walletManager.canUseBiometrics(forTx: tx)
+        guard let tx = transaction, let wallet = walletManager.wallet else { return false }
+        return authenticator.canUseBiometrics(forTransaction: tx, wallet: wallet)
     }
     
-    func updateFeeRates(_ fees: Fees, level: FeeLevel?) {
-        walletManager.wallet?.feePerKb = fees.fee(forLevel: level ?? .regular)
+    func updateFeeRates(_ fees: Fees, toLevel: FeeLevel?) {
+        walletManager.wallet?.feePerKb = fees.fee(forLevel: toLevel ?? .regular)
     }
     
     func fee(forAmount amount: UInt256) -> UInt256? {
@@ -178,6 +180,9 @@ class BitcoinSender: SenderBase<Bitcoin, BTCWalletManager>, Sender {
         guard !isOutputTooSmall else {
             return .outputTooSmall(wallet.minOutputAmount)
         }
+        guard requestAmount <= (walletManager.wallet?.maxOutputAmount ?? 0) else {
+            return .insufficientFunds
+        }
         
         return .ok
     }
@@ -206,7 +211,6 @@ class BitcoinSender: SenderBase<Bitcoin, BTCWalletManager>, Sender {
         
         comment = req.details.memo
         
-        
         return result
     }
     
@@ -216,9 +220,9 @@ class BitcoinSender: SenderBase<Bitcoin, BTCWalletManager>, Sender {
     }
     
     func sendTransaction(allowBiometrics: Bool, pinVerifier: @escaping PinVerifier, abi: String? = nil, completion: @escaping SendCompletion) {
-        guard readyToSend, let tx = transaction else { return completion(.creationError("not ready")) }
+        guard readyToSend, let tx = transaction, let wallet = walletManager.wallet else { return completion(.creationError(message: "not ready")) }
         
-        if allowBiometrics && UserDefaults.isBiometricsEnabled && walletManager.canUseBiometrics(forTx: tx) {
+        if allowBiometrics && UserDefaults.isBiometricsEnabled && authenticator.canUseBiometrics(forTransaction: tx, wallet: wallet) {
             sendWithBiometricVerification(tx: tx, pinVerifier: pinVerifier, completion: completion)
         } else {
             sendWithPinVerification(tx: tx, pinVerifier: pinVerifier, completion: completion)
@@ -256,39 +260,34 @@ class BitcoinSender: SenderBase<Bitcoin, BTCWalletManager>, Sender {
                                                pinVerifier: @escaping PinVerifier,
                                                completion: @escaping SendCompletion) {
         let biometricsPrompt = S.VerifyPin.touchIdMessage
-        
-        DispatchQueue.walletQueue.async { [weak self] in
-            guard let `self` = self else { return }
-            self.walletManager.signTransaction(tx, biometricsPrompt: biometricsPrompt, completion: { result in
-                switch result {
-                case .success:
-                    self.publish(tx: tx, completion: completion)
-                case .failure, .fallback:
-                    self.sendWithPinVerification(tx: tx,
-                                                 pinVerifier: pinVerifier,
-                                                 completion: completion)
-                default:
-                    break
-                }
-            })
+
+        guard let wallet = walletManager.wallet else { return assertionFailure() }
+        self.authenticator.sign(transaction: tx, wallet: wallet, withBiometricsPrompt: biometricsPrompt) { result in
+            switch result {
+            case .success:
+                self.publish(tx: tx, completion: completion)
+            case .failure, .fallback:
+                self.sendWithPinVerification(tx: tx,
+                                             pinVerifier: pinVerifier,
+                                             completion: completion)
+            default:
+                break
+            }
         }
     }
     
     private func sendWithPinVerification(tx: BRTxRef,
                                          pinVerifier: PinVerifier,
                                          completion: @escaping SendCompletion) {
+        // this block requires a strong reference to self to ensure the Sender is not deallocated before completion
         pinVerifier { pin in
-            let group = DispatchGroup()
-            group.enter()
-            DispatchQueue.walletQueue.async {
-                if self.walletManager.signTransaction(tx, pin: pin) {
-                    self.publish(tx: tx, completion: completion)
+            guard let wallet = self.walletManager.wallet else { return assertionFailure() }
+            if self.authenticator.sign(transaction: tx, wallet: wallet, withPin: pin) {
+                self.publish(tx: tx, completion: completion)
+            } else {
+                DispatchQueue.main.async {
+                    completion(.creationError(message: S.Send.Error.authenticationError))
                 }
-                group.leave()
-            }
-            let result = group.wait(timeout: .now() + 4.0)
-            if result == .timedOut {
-                fatalError("send-tx-timeout")
             }
         }
     }
@@ -300,16 +299,21 @@ class BitcoinSender: SenderBase<Bitcoin, BTCWalletManager>, Sender {
                 return self.postProtocolPaymentIfNeeded(completion: completion)
             }
             
-            guard let peerManager = self.walletManager.peerManager else { return completion(.publishFailure(BRPeerManagerError.posixError(errorCode: -1, description: "network not connected")))}
+            guard let peerManager = self.walletManager.peerManager else {
+                DispatchQueue.main.async {
+                    completion(.publishFailure(code: -1, message: S.Send.Error.notConnected))
+                }
+                return
+            }
             
             peerManager.publishTx(tx) { success, error in
                 DispatchQueue.main.async {
-                    if let error = error {
-                        completion(.publishFailure(error))
+                    if case .posixError(let code, let message)? = error {
+                        completion(.publishFailure(code: Int(code), message: message))
                     } else {
                         self.setMetaData(btcTx: tx)
-                        let txData = Data(bytes: tx.bytes ?? [])
-                        completion(.success(tx.pointee.txHash.description, txData.hexString))
+                        let txData = Data(tx.bytes ?? [])
+                        completion(.success(hash: tx.pointee.txHash.description, rawTx: txData.hexString))
                         self.postProtocolPaymentIfNeeded()
                     }
                 }
@@ -331,71 +335,76 @@ class BitcoinSender: SenderBase<Bitcoin, BTCWalletManager>, Sender {
         guard let protoReq = protocolRequest else { return }
         guard let wallet = walletManager.wallet else { return }
         let amount = protoReq.amount
-        let payment = PaymentProtocolPayment(merchantData: protoReq.details.merchantData,
-                                             transactions: [transaction],
-                                             refundTo: [(address: wallet.receiveAddress, amount: amount)])
-        payment?.currency = currency.code
+        guard let payment = PaymentProtocolPayment(merchantData: protoReq.details.merchantData,
+                                                   transactions: [transaction],
+                                                   refundTo: [(address: wallet.receiveAddress, amount: amount)]) else { return }
+        payment.currency = currency.code
         guard let urlString = protoReq.details.paymentURL else { return }
         guard let url = URL(string: urlString) else { return }
         
         let request = NSMutableURLRequest(url: url, cachePolicy: .reloadIgnoringCacheData, timeoutInterval: protocolPaymentTimeout)
         request.httpMethod = "POST"
         
-        if (protoReq.mimeType == "application/payment-request") {
+        if protoReq.mimeType == "application/payment-request" {
             request.setValue("application/payment", forHTTPHeaderField: "Content-Type")
             request.addValue("application/payment-ack", forHTTPHeaderField: "Accept")
-            request.httpBody = payment?.json?.data(using: .utf8)
-        }
-        else {
+            request.httpBody = payment.json?.data(using: .utf8)
+        } else {
             request.setValue("application/bitcoin-payment", forHTTPHeaderField: "Content-Type")
             request.addValue("application/bitcoin-paymentack", forHTTPHeaderField: "Accept")
-            request.httpBody = Data(bytes: payment!.bytes)
+            request.httpBody = Data(payment.bytes)
         }
         
-        print("posting to: \(url)")
+        print("[PAY] posting to: \(url)")
         
-        URLSession.shared.dataTask(with: request as URLRequest) { [weak self] data, response, error in
+        URLSession.shared.dataTask(with: request as URLRequest) { data, response, error in
             DispatchQueue.main.async {
+                let protocolPaymentErrorCode = 74 // ?
+
                 guard error == nil else {
-                    print("payment error: \(error!)");
-                    return completion(.publishFailure(.posixError(errorCode: 74, description: "\(error!)")))
+                    print("[PAY] payment error: \(error!)")
+                    return completion(.publishFailure(code: protocolPaymentErrorCode, message: "\(error!)"))
                 }
                 
                 guard let response = response, let data = data else {
-                    print("no response or data");
-                    return completion(.publishFailure(.posixError(errorCode: 74, description: "no response or data")))
+                    print("[PAY] no response or data")
+                    return completion(.publishFailure(code: protocolPaymentErrorCode, message: "no response or data"))
+                }
+
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 300 {
+                    print("[PAY] error response: \(httpResponse)")
+                    return completion(.publishFailure(code: httpResponse.statusCode, message: "request error"))
                 }
                 
                 if response.mimeType == "application/bitcoin-paymentack" && data.count <= 50000 {
                     if let ack = PaymentProtocolACK(data: data) {
-                        print("received ack: \(ack)") //TODO - show memo to user
-                        completion(.success(nil,nil))
-                    }
-                    else {
-                        print("ack failed to deserialize")
-                        completion(.publishFailure(.posixError(errorCode: 74, description: "ack failed to deserialize")))
-                    }
-                }
-                else if response.mimeType == "application/payment-ack" && data.count <= 50000 {
-                    if let ack = PaymentProtocolACK(json: String(data: data, encoding: .utf8) ?? "") {
-                        print("received ack: \(ack)") //TODO - show memo to user
-                        
-                        if let tx = self?.transaction {
-                            self?.setMetaData(btcTx: tx)
-                            completion(.success(nil,nil))
+                        print("[PAY] received ack: \(ack)") //TODO - show memo to user
+                        if let tx = self.transaction {
+                            self.setMetaData(btcTx: tx)
                         }
+                        completion(.success(hash: nil, rawTx: nil))
+                    } else {
+                        print("[PAY] ack failed to deserialize")
+                        completion(.publishFailure(code: protocolPaymentErrorCode, message: "ack failed to deserialize"))
                     }
-                    else {
-                        print("ack failed to deserialize")
-                        completion(.publishFailure(.posixError(errorCode: 74, description: "ack failed to deserialize")))
+                } else if response.mimeType == "application/payment-ack" && data.count <= 50000 {
+                    if let ack = PaymentProtocolACK(json: String(data: data, encoding: .utf8) ?? "") {
+                        print("[PAY] received ack: \(ack)") //TODO - show memo to user
+                        
+                        if let tx = self.transaction {
+                            self.setMetaData(btcTx: tx)
+                            completion(.success(hash: nil, rawTx: nil))
+                        }
+                    } else {
+                        print("[PAY] ack failed to deserialize")
+                        completion(.publishFailure(code: protocolPaymentErrorCode, message: "ack failed to deserialize"))
                     }
-                }
-                else {
-                    print("invalid data")
-                    completion(.publishFailure(.posixError(errorCode: 74, description: "invalid data")))
+                } else {
+                    print("[PAY] invalid data")
+                    completion(.publishFailure(code: protocolPaymentErrorCode, message: "invalid data"))
                 }
                 
-                print("finished!!")
+                print("[PAY] finished!!")
             }
             }.resume()
     }
@@ -404,14 +413,14 @@ class BitcoinSender: SenderBase<Bitcoin, BTCWalletManager>, Sender {
 // MARK: -
 
 /// Base class for sending Ethereum-network transactions
-class EthSenderBase<CurrencyType: CurrencyDef> : SenderBase<CurrencyType, EthWalletManager>, GasEstimator {
+class EthSenderBase<CurrencyType: Currency>: SenderBase<CurrencyType, EthWalletManager>, GasEstimator {
     
     fileprivate var address: String?
     fileprivate var amount: UInt256?
     
     // MARK: Sender
     
-    func updateFeeRates(_ fees: Fees, level: FeeLevel? = nil) {
+    func updateFeeRates(_ fees: Fees, toLevel: FeeLevel? = nil) {
         walletManager.gasPrice = fees.gasPrice
     }
     
@@ -448,7 +457,7 @@ class EthSenderBase<CurrencyType: CurrencyDef> : SenderBase<CurrencyType, EthWal
         let estimate: UInt256
     }
     
-    fileprivate var estimate: GasEstimate? = nil
+    fileprivate var estimate: GasEstimate?
     
     func hasFeeForAddress(_ address: String, amount: Amount) -> Bool {
         return estimate?.address == address && estimate?.amount.rawValue == amount.rawValue
@@ -458,8 +467,7 @@ class EthSenderBase<CurrencyType: CurrencyDef> : SenderBase<CurrencyType, EthWal
         estimate = nil
         guard let fromAddress = self.walletManager.address else { return }
         let params = transactionParams(fromAddress: fromAddress, toAddress: toAddress, forAmount: amount)
-        Backend.apiClient.estimateGas(transaction: params, handler: { [weak self] result in
-            guard let `self` = self else { return }
+        Backend.apiClient.estimateGas(transaction: params, handler: { result in
             switch result {
             case .success(let value):
                 self.estimate = GasEstimate(address: toAddress, amount: amount, estimate: value)
@@ -477,7 +485,7 @@ class EthSenderBase<CurrencyType: CurrencyDef> : SenderBase<CurrencyType, EthWal
     }
 }
 
-class EthereumSender: EthSenderBase<Ethereum>, Sender {
+class EthereumSender: EthSenderBase<Ethereum>, Sender, Trackable {
     
     // customGasPrice and customGasLimit parameters are only used for contract transactions
     // only used for che checkout feature
@@ -488,46 +496,84 @@ class EthereumSender: EthSenderBase<Ethereum>, Sender {
         return checkoutCustomGasPrice ?? walletManager.gasPrice
     }
     
-    private var gasLimit: UInt256 {
+    private var gasLimit: UInt256? {
         if let limit = checkoutCustomGasLimit {
             return limit
         } else if let limit = estimate?.estimate {
             return limit
         } else {
-            return UInt256(walletManager.defaultGasLimit(currency: currency))
+            return nil
         }
     }
     
     // MARK: Sender
     
     func fee(forAmount: UInt256) -> UInt256? {
-        return gasPrice * gasLimit
+        return gasPrice * (gasLimit ?? UInt256(walletManager.defaultGasLimit(currency: currency)))
     }
     
     func sendTransaction(allowBiometrics: Bool, pinVerifier: @escaping PinVerifier, abi: String? = nil, completion: @escaping SendCompletion) {
         guard readyToSend,
             let address = address,
             let amount = amount else {
-                return completion(.creationError("not ready"))
+                assertionFailure()
+                return completion(.creationError(message: "not ready"))
         }
-        
+
+        // this block requires a strong reference to self to ensure the Sender is not deallocated before completion
         pinVerifier { pin in
-            self.walletManager.sendTransaction(currency: self.currency, toAddress: address, amount: amount, abi: abi, gasPrice: self.gasPrice, gasLimit: self.gasLimit) { result in
-                switch result {
-                case .success(let pendingTx, nil, let rawTx):
-                    self.setMetaData(tx: pendingTx)
-                    completion(.success(pendingTx.hash, rawTx))
-                case .error(let error):
-                    switch error {
-                    case .httpError(let e):
-                        completion(.creationError(e?.localizedDescription ?? ""))
-                    case .jsonError(let e):
-                        completion(.creationError(e?.localizedDescription ?? ""))
-                    case .rpcError(let e):
-                        completion(.creationError(e.message))
+            guard let (tx, wallet) =
+                self.walletManager.createTransaction(currency: self.currency,
+                                                     toAddress: address,
+                                                     amount: amount,
+                                                     abi: abi,
+                                                     gasPrice: self.gasPrice,
+                                                     gasLimit: self.gasLimit) else {
+                                                        DispatchQueue.main.async {
+                                                            completion(.creationError(message: S.Send.createTransactionError))
+                                                        }
+                                                        return
+            }
+
+            self.walletManager.estimateGas(for: tx, gasLimit: self.gasLimit) { gasEstimationResult in
+                guard case .success = gasEstimationResult else {
+                    DispatchQueue.main.async {
+                        completion(.creationError(message: S.Send.createTransactionError))
                     }
-                default:
-                    assertionFailure("invalid parameters")
+                    return
+                }
+                
+                guard self.authenticator.sign(transaction: tx, wallet: wallet, withPin: pin) else {
+                    DispatchQueue.main.async {
+                        completion(.creationError(message: S.Send.Error.authenticationError))
+                    }
+                    return
+                }
+
+                self.walletManager.sendTransaction(tx) { result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success(let pendingTx, nil, let rawTx):
+                            self.setMetaData(tx: pendingTx)
+                            completion(.success(hash: pendingTx.hash, rawTx: rawTx))
+                        case .failure(let error):
+                            switch error {
+                            case .invalidWalletState:
+                                self.saveEvent(Event.iOSError.name, attributes: ["context": "send",
+                                                                                 "error": "invalidWalletState"])
+                                completion(.creationError(message: S.Send.createTransactionError))
+                            case .timedOut:
+                                self.saveEvent(Event.iOSError.name, attributes: ["context": "send",
+                                                                                 "error": "timedOut"])
+                                completion(.publishFailure(code: -1, message: S.Alert.timedOut))
+                            case .publishError(let publishError):
+                                completion(.publishFailure(code: publishError.code, message: publishError.message))
+
+                            }
+                        default:
+                            assertionFailure("invalid parameters")
+                        }
+                    }
                 }
             }
         }
@@ -555,50 +601,85 @@ class EthereumSender: EthSenderBase<Ethereum>, Sender {
 
 // MARK: -
 
-class ERC20Sender: EthSenderBase<ERC20Token>, Sender {
+class ERC20Sender: EthSenderBase<ERC20Token>, Sender, Trackable {
     
     // MARK: Sender
-    private var gasLimit: UInt256 {
+    private var gasLimit: UInt256? {
         if let limit = estimate?.estimate {
             return limit
         } else {
-            return UInt256(walletManager.defaultGasLimit(currency: currency))
+            return nil
         }
     }
     
     func fee(forAmount: UInt256) -> UInt256? {
-        return walletManager.gasPrice * UInt256(walletManager.defaultGasLimit(currency: currency))
+        return walletManager.gasPrice * (gasLimit ?? UInt256(walletManager.defaultGasLimit(currency: currency)))
     }
     
     func sendTransaction(allowBiometrics: Bool, pinVerifier: @escaping PinVerifier, abi: String? = nil, completion: @escaping SendCompletion) {
         guard readyToSend,
             let address = address,
             let amount = amount else {
-                return completion(.creationError("not ready"))
+                assertionFailure()
+                return completion(.creationError(message: "not ready"))
         }
 
+        // this block requires a strong reference to self to ensure the Sender is not deallocated before completion
         pinVerifier { pin in
-            self.walletManager.sendTransaction(currency: self.currency, toAddress: address, amount: amount, gasLimit: self.gasLimit) { result in
-                switch result {
-                case .success(let pendingEthTx, let pendingTokenTx?, let rawTx):
-                    self.setMetaData(ethTx: pendingEthTx, tokenTx: pendingTokenTx)
-                    completion(.success(pendingEthTx.hash, rawTx))
-                case .error(let error):
-                    switch error {
-                    case .httpError(let e):
-                        completion(.creationError(e?.localizedDescription ?? ""))
-                    case .jsonError(let e):
-                        completion(.creationError(e?.localizedDescription ?? ""))
-                    case .rpcError(let e):
-                        //TODO: hack, need a better way to detect this scenario
-                        if e.message.hasPrefix("insufficient funds for gas") {
-                            completion(.insufficientGas(e.message))
-                        } else {
-                            completion(.creationError(e.message))
+            guard let (tx, wallet) =
+                self.walletManager.createTransaction(currency: self.currency,
+                                                     toAddress: address,
+                                                     amount: amount) else {
+                                                        DispatchQueue.main.async {
+                                                            completion(.creationError(message: S.Send.createTransactionError))
+                                                        }
+                                                        return
+            }
+
+            self.walletManager.estimateGas(for: tx, gasLimit: self.gasLimit) { gasEstimationResult in
+                guard case .success = gasEstimationResult else {
+                    DispatchQueue.main.async {
+                        completion(.creationError(message: S.Send.createTransactionError))
+                    }
+                    return
+                }
+
+                guard self.authenticator.sign(transaction: tx, wallet: wallet, withPin: pin) else {
+                    DispatchQueue.main.async {
+                        completion(.creationError(message: S.Send.Error.authenticationError))
+                    }
+                    return
+                }
+                self.walletManager.sendTransaction(tx) { result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success(let pendingEthTx, let pendingTokenTx, let rawTx):
+                            if let pendingTokenTx = pendingTokenTx {
+                                self.setMetaData(ethTx: pendingEthTx, tokenTx: pendingTokenTx)
+                            } else {
+                                assertionFailure("expected token tx in result")
+                            }
+                            completion(.success(hash: pendingEthTx.hash, rawTx: rawTx))
+                        case .failure(let error):
+                            switch error {
+                            case .invalidWalletState:
+                                self.saveEvent(Event.iOSError.name, attributes: ["context": "send",
+                                                                                 "error": "invalidWalletState"])
+                                completion(.creationError(message: S.Send.createTransactionError))
+                            case .timedOut:
+                                self.saveEvent(Event.iOSError.name, attributes: ["context": "send",
+                                                                                 "error": "timedOut"])
+                                completion(.publishFailure(code: -1, message: S.Alert.timedOut))
+                            case .publishError(let publishError):
+                                //TODO: hack, need a better way to detect this scenario
+                                if publishError.message.hasPrefix("insufficient funds for gas") {
+                                    completion(.insufficientGas(message: publishError.message))
+                                } else {
+                                    completion(.publishFailure(code: publishError.code, message: publishError.message))
+                                }
+                            }
                         }
                     }
-                default:
-                    assertionFailure("invalid parameters")
                 }
             }
         }
@@ -638,8 +719,9 @@ class ERC20Sender: EthSenderBase<ERC20Token>, Sender {
         let sig = "0xa9059cbb"
         let to = toAddress.withoutHexPrefix
         let amountString = forAmount.rawValue.hexString.withoutHexPrefix
-        let addressPadding = Array(repeating: "0", count: 24).joined()
-        let amountPadding = Array(repeating: "0", count: (66 - amountString.utf8.count)).joined()
+        let maxPaddingLength = 64 //32 bytes
+        let addressPadding = Array(repeating: "0", count: maxPaddingLength - toAddress.withoutHexPrefix.utf8.count).joined()
+        let amountPadding = Array(repeating: "0", count: maxPaddingLength - amountString.utf8.count).joined()
         params.data = "\(sig)\(addressPadding)\(to)\(amountPadding)\(amountString)"
         return params
     }
@@ -648,16 +730,16 @@ class ERC20Sender: EthSenderBase<ERC20Token>, Sender {
 
 // MARK: -
 
-extension CurrencyDef {
-    func createSender(walletManager: WalletManager, kvStore: BRReplicatedKVStore) -> Sender? {
+extension Currency {
+    func createSender(authenticator: TransactionAuthenticator, walletManager: WalletManager, kvStore: BRReplicatedKVStore) -> Sender? {
         
         switch (self, walletManager) {
-        case (is Bitcoin, is BTCWalletManager):
-            return BitcoinSender(currency: self as! Bitcoin, walletManager: walletManager as! BTCWalletManager, kvStore: kvStore)
-        case (is Ethereum, is EthWalletManager):
-            return EthereumSender(currency: self as! Ethereum, walletManager: walletManager as! EthWalletManager, kvStore: kvStore)
-        case (is ERC20Token, is EthWalletManager):
-            return ERC20Sender(currency: self as! ERC20Token, walletManager: walletManager as! EthWalletManager, kvStore: kvStore)
+        case (let currency as Bitcoin, let btcWalletManager as BTCWalletManager):
+            return BitcoinSender(authenticator: authenticator, currency: currency, walletManager: btcWalletManager, kvStore: kvStore)
+        case (let currency as Ethereum, let ethWalletManager as EthWalletManager):
+            return EthereumSender(authenticator: authenticator, currency: currency, walletManager: ethWalletManager, kvStore: kvStore)
+        case (let currency as ERC20Token, let ethWalletManager as EthWalletManager):
+            return ERC20Sender(authenticator: authenticator, currency: currency, walletManager: ethWalletManager, kvStore: kvStore)
         default:
             assertionFailure("unsupporeted currency/wallet")
             return nil

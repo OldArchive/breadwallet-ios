@@ -22,6 +22,8 @@
 "AccessibilityLabels.faq" = "Supportcenter";
 /* Account balance */
 "Account.balance" = "Saldo";
+/* Delisted token alert banner message */
+"Account.delistedToken" = "Denne værdikupon er fjernet fra listen, da udstederen har valgt at stoppe ERC20-support. \n\nDu kan muligvis stadig sende disse værdikuponer til en anden platform. Se vores hjælpeside for mere information.";
 /* $10000 per BTC */
 "Account.exchangeRate" = "%1$@ per %2$@";
 /* Loading Wallet Message */
@@ -36,10 +38,16 @@
 "Alert.keystore.generic.android" = "Der er et problem med din Android OS keystore, kontakt venligst support@breadwallet.com";
 /* KeyStore error, keys are invalidated */
 "Alert.keystore.invalidated.android" = "Dine BRD-krypterede data blev for nyligt ugyldiggjort, eftersom din Android skærmlås blev deaktiveret.";
+/* Warn user key store data has been invalidate because the user changed their security settings. The user must uninstall. */
+"Alert.keystore.invalidated.uninstall.android" = "Vi kan ikke fortsætte, fordi dine indstillinger for skærmlåsen er blevet ændret (f.eks. adgangskoden deaktiveret, fingeraftryk ændret). Af sikkerhedshensyn har Android permanent låst din nøglelager. Derfor skal dine BRD-appdata fjernes fuldstændigt ved at afinstallere.\n\nBare rolig, dine midler er stadig sikre! Geninstallr appen og gendan din pung vha. din papirnøgle.";
+/* Warn user key store data has been invalidate because the user changed their security settings. The user must wipe their app data. */
+"Alert.keystore.invalidated.wipe.android" = "Vi kan ikke fortsætte, fordi dine indstillinger for skærmlåsen er blevet ændret (f.eks. adgangskoden deaktiveret, fingeraftryk ændret). Af sikkerhedshensyn har Android permanent låst din nøglelager. Derfor skal dine BRD-appdata fjernes fuldstændugt.\n\nBare rolig, dine midler er stadig sikre! Gendan din pung vha. din papirtast.";
 /* Keystore error title */
 "Alert.keystore.title.android" = "Android KeyStore fejl";
 /* No internet alert message */
 "Alert.noInternet" = "Ingen internetforbindelse fundet. Tjek din forbindelse og prøv igen.";
+/* General error message */
+"Alert.somethingWentWrong" = "Noget gik galt. Prøv igen.";
 /* Request timed out error message */
 "Alert.timedOut" = "Anmodingen er udløbet. Tjek din forbindelse og prøv igen.";
 /* Warning alert title */
@@ -114,30 +122,52 @@
 "Button.buy" = "Køb";
 /* Cancel button label */
 "Button.cancel" = "Annuller";
+/* Confirm button title */
+"Button.confirm" = "Bekræft";
+/* Button label to open a email compose window with our support email in the to field. */
+"Button.contactSupport.android" = "Kontakt support";
 /* prompt continue button */
 "Button.continueAction" = "Fortsæt";
 /* prompt dismiss button */
 "Button.dismiss" = "Afvis";
+/* Done button title */
+"Button.done" = "Færdig";
 /* Button to return to the "home" screen (the home screen is the top menu). */
 "Button.Home" = "Hjem";
 /* Ignore button label */
 "Button.ignore" = "Ignorer";
+/* Maybe Later button label */
+"Button.maybeLater" = "Måske senere";
 /* menu button */
 "Button.menu" = "Menu";
+/* More information button */
+"Button.moreInfo" = "Mere info";
 /* No button */
 "Button.no" = "Nej";
 /* OK button label */
 "Button.ok" = "OK";
+/* Open Settings button */
+"Button.openSettings" = "Åbn indstillinger";
 /* receive button */
 "Button.receive" = "Modtag";
+/* Button label to open Security Settings. */
+"Button.securitySettings.android" = "Sikkerhedscenter";
 /* Click this button to sell an asset */
 "Button.sell" = "Sælg";
 /* send button */
 "Button.send" = "send";
 /* Settings button label */
 "Button.settings" = "Indstillinger";
+/* Setup button label */
+"Button.setup" = "Opsætning";
+/* Skip button title */
+"Button.skip" = "Spring over";
 /* Settings button label */
 "Button.submit" = "Send";
+/* Button label to uninstall the app. */
+"Button.uninstall.android" = "Afinstaller";
+/* Button label to wipe the user's application data. */
+"Button.wipe.android" = "Fjern fuldstændigt";
 /* Yes button */
 "Button.yes" = "Ja";
 /* Camera plugin instruction */
@@ -146,6 +176,8 @@
 "Confirmation.amountLabel" = "Beløb der skal sendes:";
 /* Network Fee: ($1.00) */
 "Confirmation.feeLabel" = "Netværksgebyr:";
+/* Network Fee: (ETH) */
+"Confirmation.feeLabelETH" = "Netværksgebyr (ETH):";
 /* eg. Processing time: This transaction is predicted to complete in [10-60 minutes]. */
 "Confirmation.processingTime" = "Behandlingstid: denne transaktion er efter planen færdig om %1$@.";
 /* Label for "send" button on final confirmation screen */
@@ -178,6 +210,8 @@
 "DefaultCurrency.rateLabel" = "Valutakurs";
 /* The wallet is disabled. */
 "Disabled.title" = "Pung deaktiveret";
+/* Share address by e-mail subject */
+"Email.address_subject" = "%1$s adresse";
 /* Service capabilities description */
 "EME.permissions.accountRequest" = "Anmod om %1$@-kontooplysninger";
 /* Service capabilities description */
@@ -222,16 +256,24 @@
 "FeeSelector.estimatedDeliver" = "Forventet levering: %1$@";
 /* [This transaction will complete in] 2-5 minutes */
 "FeeSelector.ethTime" = "2-5 minutter";
+/* Priority fee */
+"FeeSelector.priority" = "Prioritet";
+/* E.g. [This transaction is predicted to complete in] 10-30 minutes */
+"FeeSelector.priorityTime" = "10-30 minutter";
 /* Regular fee */
 "FeeSelector.regular" = "Almindelig";
 /* E.g. [This transaction is predicted to complete in] 10-60 minutes */
 "FeeSelector.regularTime" = "10-60 minutter";
 /* Fee Selector title */
 "FeeSelector.title" = "Behandlingshastighed";
+/* Label for the Android file chooser when we need to prompt the user to select an image file. */
+"FileChooser.selectImageSource.android" = "Vælg Billedkilde";
 /* This is the section that allows administration of the user's wallet */
 "HomeScreen.admin" = "Administration";
 /* Home screen menu button to buy some bitcoin */
 "HomeScreen.buy" = "Køb";
+/* home screen toolbar 'Buy & Sell' button */
+"HomeScreen.buyAndSell" = "Køb og Sælg";
 /* Menu button on the home screen toolbar */
 "HomeScreen.menu" = "Menu";
 /* This section lists the users wallets */
@@ -340,6 +382,14 @@
 "MenuViewController.modalTitle" = "Menu";
 /* button label */
 "MenuViewController.recoverButton" = "Gendan pung";
+/* Paper Key Skip modal body (Android-version) */
+"Modal.PaperKeySkip.Body.Android" = "Din papirnøgle er nødvendig for at du kan åbne din tegnebog, hvis du ændrer sikkerhedsindstillingerne på din telefon.\n\nEr du sikker på at du vil oprette din papirnøgle senere?";
+/* Paper Key Skip modal Continue Set Up button */
+"Modal.PaperKeySkip.Button.ContinueSetUp" = "Fortsæt oprettelse";
+/* Paper Key Skip modal I'll do it later button */
+"Modal.PaperKeySkip.Button.IllDoItLater" = "Jeg gør det senere";
+/* Paper Key Skip modal title */
+"Modal.PaperKeySkip.Title" = "Vær opmærksom";
 /* Switch to automatic mode button label */
 "NodeSelector.automaticButton" = "Skift til automatisk tilstand";
 /* Node is connected label */
@@ -360,6 +410,30 @@
 "NodeSelector.statusLabel" = "Node forbindelsesstatus";
 /* Node Selector view title */
 "NodeSelector.title" = "Bitcoin-nodes";
+/* Onboarding screen 'I'll browse first' button */
+"Onboarding.browseFirst" = "Jeg kigger først";
+/* Onboarding screen 'Buy some coin' button */
+"Onboarding.buyCoin" = "Køb nogle coins";
+/* Onboarding screen 'Get started' (create new wallet) button */
+"Onboarding.getStarted" = "Kom i gang";
+/* Onboarding screen 'Next' button */
+"Onboarding.next" = "Næste";
+/* Onboarding screen restore an existing wallet. */
+"Onboarding.restoreWallet" = "Gendan tegnebog";
+/* Onboarding screen Skip button title that allows the user to exit the onboarding process. */
+"Onboarding.skip" = "Spring over";
+/* Onboarding screen Page 4 title */
+"OnboardingPageFour.title" = "Begynd at investere i dag for så lidt som 50 dollars!";
+/* Onboarding screen Page 1 title */
+"OnboardingPageOne.title" = "Velkommen til din nye globale tegnebog!";
+/* Onboarding screen Page 3 subtitle */
+"OnboardingPageThree.subtitle" = "Invester og diversificer med BRD, nemt og sikkert.";
+/* Onboarding screen Page 3 title */
+"OnboardingPageThree.title" = "Køb og sælg bitcoin, tokens og andre digitale valutaer.";
+/* Onboarding screen Page 2 subtitle */
+"OnboardingPageTwo.subtitle" = "Vi har aktiver til en værdi af mere end 6 milliarder dollars under vores beskyttelse.";
+/* Onboarding screen Page 2 title */
+"OnboardingPageTwo.title" = "Gør som millioner af mennesker over hele verden, der stoler på BRD.";
 /* Eg. Send 1.0Eth to purchase CCC */
 "PaymentConfirmation.amountText" = "Send %1$@ for at købe %2$@";
 /* Payment confirmation view title */
@@ -382,6 +456,18 @@
 "PaymentProtocol.Errors.unsupportedSignatureType" = "ikke understøttet signaturtype";
 /* Untrusted certificate payment protocol error message */
 "PaymentProtocol.Errors.untrustedCertificate" = "certifikat der ikke er tillid til";
+/* Body text for a prompt that asks the user to subscribe to email updates to find out product updates. */
+"Prompts.Email.body" = "Vær den første til at modtage vigtige support- og produktopdateringer";
+/* Placeholder text for an email address text field. */
+"Prompts.Email.placeholder" = "Indtast din e-mail";
+/* Body text that is shown when the user successfully subscribes to email updates. */
+"Prompts.Email.successBody" = "Du har abonneret på at modtage opdateringer";
+/* Text that is displayed as a footnote when the user successfully subscribes to email updates. */
+"Prompts.Email.successFootnote" = "Vi værdsætter din fortsatte støtte";
+/* Title that is shown when the user successfully subscribes to email updates. */
+"Prompts.Email.successTitle" = "Tak skal du have!";
+/* Title for a prompt that asks the user to subscribe to email updates to find out product updates. */
+"Prompts.Email.title" = "Hold dig opdateret";
 /* Enable face ID prompt body */
 "Prompts.FaceId.body" = "Tryk Fortsæt for at aktivere Face ID";
 /* Enable face ID prompt title */
@@ -390,12 +476,14 @@
 "Prompts.NoPasscode.body" = "En adgangskode til enheden er nødvendig for at beskytte din wallet. Gå til indstillinger og slå adgangskode til.";
 /* No Passcode set warning title */
 "Prompts.NoPasscode.title" = "Slå enhedens adgangskode til";
-/* Instruction how to enable device encryption */
+/* Instructions on how to enable screen lock settings */
 "Prompts.NoScreenLock.body.android" = "Der skal en skærmlås til på enheden, for at beskytte din pung. Gå til \"Indstillinger\" > \"Sikkerhed\" > \"Skærmlås\" og aktiver for at fortsætte.";
 /* Device encryption prompt title */
 "Prompts.NoScreenLock.title.android" = "Skærmlås deaktiveret";
-/* Warning about paper key. */
-"Prompts.PaperKey.body" = "Din Papirnøgle skal gemmes i tilfælde af du nogensinde mister eller skifter telefon. Tryk her for at fortsætte.";
+/* Warning about recovery key (formerly paper key). */
+"Prompts.PaperKey.body" = "Din Papirnøgle skal gemmes i tilfælde af du nogensinde mister eller skifter telefon.";
+/* Warning about paper key (Android-version) */
+"Prompts.PaperKey.Body.Android" = "Opret din papirnøgle, i tilfælde af at du mister eller udskifter din telefon. Din nøgle er også påkrævet, hvis du ændrer sikkerhedsindstillingerne på din telefon.";
 /* An action is required (You must do this action). */
 "Prompts.PaperKey.title" = "Handling påkrævet";
 /* Transaction rejected prompt body */
@@ -420,20 +508,32 @@
 "Prompts.UpgradePin.body" = "BRD er blevet opgraderet til at bruge en 6-cifret PIN. Tryk her for at opgradere.";
 /* Upgrade PIN prompt title. */
 "Prompts.UpgradePin.title" = "Opgader PIN";
-/* Notifications will be added later but users can set their preferences now, which is why we specify "in the future". */
-"PushNotifications.body" = "Slå notifikationer til for at modtage særlige meddelelser fra BRD i fremtiden.";
+/* Body text for the push notifications prompt. */
+"PushNotifications.body" = "Slå push-notifikationer til, og vær den første til at høre om nye funktioner og specialtilbud.";
 /* Push notifications are disabled alert title" */
 "PushNotifications.disabled" = "Notifikationer deaktiveret";
-/* Push notifications settings instructions */
-"PushNotifications.enableInstructions" = "Slå notifikationer til i Indstillinger for at modtage advarsler";
+/* Body text when push notifications are disabled. */
+"PushNotifications.disabledBody" = "Aktivér meddelelser for at modtage særlige tilbud og opdateringer fra BRD.";
+/* Body text when push notifications are enabled. */
+"PushNotifications.enabledBody" = "Du modtager særlige tilbud og opdateringer fra BRD.";
+/* Instructions to enable push notifications for BRD in the phone's system settings. */
+"PushNotifications.enableInstructions" = "Det lader til, at meddelelser er slået fra. Gå til Indstillinger for at aktivere meddelelser fra BRD.";
 /* Push notifications toggle switch label */
-"PushNotifications.label" = "Push notifikationer";
+"PushNotifications.label" = "Modtag pushmeddelelser";
 /* Push notifications are off label */
 "PushNotifications.off" = "Fra";
 /* Push notifications are on label */
 "PushNotifications.on" = "Til";
 /* Push notifications settings view title label */
-"PushNotifications.title" = "Notifikationer";
+"PushNotifications.title" = "Hold dig opdateret";
+/* Google play review prompt body */
+"RateAppPrompt.Body.Android" = "Hvis du elsker vores app, skal du tage et øjeblik til at bedømme den og give os en anmeldelse.";
+/* Google play review prompt, revivew button */
+"RateAppPrompt.Button.Dismiss.Android" = "Nej tak";
+/* Google play review prompt, dismiss button */
+"RateAppPrompt.Button.RateApp.Android" = "Bedøm BRD";
+/* Google play review prompt title */
+"RateAppPrompt.Title.Android" = "Bedøm BRD";
 /* Address copied message. */
 "Receive.copied" = "Kopieret til udklipsholder.";
 /* Share via email button label */
@@ -470,6 +570,74 @@
 "RecoverWallet.subheader" = "Indtast paper key til pungen du vil gendanne.";
 /* Reset PIN with paper key: sub-header */
 "RecoverWallet.subheader_reset_pin" = "For at nulstille din PIN, skal du indtaste ordene fra din paper key i boksene nedenfor.";
+/* Instructs the user to enter words from the set of recovery key words. */
+"RecoveryKeyFlow.confirmRecoveryInputError" = "Ordet du indtastede er forkert. Prøv igen.";
+/* Instructs the user to enter words from the set of recovery key words. */
+"RecoveryKeyFlow.confirmRecoveryKeySubtitle" = "Næsten færdig! Indtast følgende ord fra din genoprettelsesnøgle.";
+/* Title for the confirmation step of the recovery key flow. */
+"RecoveryKeyFlow.confirmRecoveryKeyTitle" = "Bekræft Genoprettelsesnøgle";
+/* Title displayed when the user starts the process of entering a recovery key */
+"RecoveryKeyFlow.enterRecoveryKey" = "Indtast Genoprettelsesnøgle";
+/* Subtitle displayed when the user starts the process of entering a recovery key */
+"RecoveryKeyFlow.enterRecoveryKeySubtitle" = "Indtast venligst din genoprettelsesnøgle for at fjerne tilknytningen til denne tegnebog fra din enhed.";
+/* Body text for an alert dialog asking the user whether to set up the recovery key later */
+"RecoveryKeyFlow.exitRecoveryKeyPromptBody" = "Er du sikker på, at du vil opsætte din genoprettelsesnøgle senere?";
+/* Title for an alert dialog asking the user whether to set up the recovery key later */
+"RecoveryKeyFlow.exitRecoveryKeyPromptTitle" = "Opsæt senere";
+/* Button text for the 'Generate Recovery Key' button */
+"RecoveryKeyFlow.generateKeyButton" = "Generer Genoprettelsesnøgle";
+/* Subtext for the recovery key landing page. */
+"RecoveryKeyFlow.generateKeyExplanation" = "Denne nøgle er nødvendig for at inddrive dine penge, hvis du opgraderer eller mister din telefon.";
+/* Default title for the recovery key landing page */
+"RecoveryKeyFlow.generateKeyTitle" = "Generer din private genoprettelsesnøgle";
+/* Title for a button that takes the user to the wallet after setting up the recovery key. */
+"RecoveryKeyFlow.goToWalletButtonTitle" = "Gå til Tegnebog";
+/* Hint text for recovery key intro page, e.g., Step 2 */
+"RecoveryKeyFlow.howItWorksStep" = "Sådan fungerer det - Trin %1$@";
+/* Error text displayed when the user enters an incorrect recovery key */
+"RecoveryKeyFlow.invalidPhrase" = "Nogle af de indtastede ord matcher ikke din genoprettelsesnøgle. Prøv igen.";
+/* Title for recovery key intro page */
+"RecoveryKeyFlow.keepSecure" = "Hold den sikker";
+/* Informs the user that the recovery is only required for recovering a wallet. */
+"RecoveryKeyFlow.keyUseHint" = "Din nøgle er kun nødvendig til genopretning, ikke til hverdagsadgang til tegnebogen.";
+/* Reminds the user not to take screenshots or email the recovery key words */
+"RecoveryKeyFlow.noScreenshotsOrEmailWarning" = "Af sikkerhedshensyn skal du ikke tage skærmbilleder eller e-maile disse ord";
+/* Recommends that the user avoids capturing the paper key with a screenshot */
+"RecoveryKeyFlow.noScreenshotsRecommendation" = "Skriv din nøgle ned på papir og bekræft den. Skærmbilleder anbefales ikke af sikkerhedsmæssige årsager.";
+/* Title displayed when the user starts the process of recovering a wallet */
+"RecoveryKeyFlow.recoveryYourWallet" = "Gendan din Tegnebog";
+/* Subtitle displayed when the user starts the process of recovering a wallet */
+"RecoveryKeyFlow.recoveryYourWalletSubtitle" = "Indtast venligst genoprettelsesnøglen til den tegnebog, du vil gendanne.";
+/* Title for recovery key intro page */
+"RecoveryKeyFlow.relaxBuyTrade" = "Slap af, køb og handel";
+/* Reminds the user to write down the recovery key words. */
+"RecoveryKeyFlow.rememberToWriteDownReminder" = "Husk at skrive disse ord ned. Stryg tilbage, hvis du har glemt dem.";
+/* Instruction displayed when the user is resetting the PIN, which requires the recovery key to be entered */
+"RecoveryKeyFlow.resetPINInstruction" = "Indtast venligst din genoprettelsesnøgle for at nulstille din pinkode.";
+/* Assures the user that BRD will keep the user's funds secure. */
+"RecoveryKeyFlow.securityAssurance" = "Køb og handel vel vidende, at dine midler er beskyttet af den bedste sikkerhed og privatlivspolitik i branchen.";
+/* Recommends that the user stores the recovery key in a secure location */
+"RecoveryKeyFlow.storeSecurelyRecommendation" = "Gem din nøgle på et sikkert sted. Dette er den eneste måde at genoprette din tegnebog på. BRD beholder ikke en kopi.";
+/* Title for the success page after the recovery key has been set up */
+"RecoveryKeyFlow.successHeading" = "Tillykke! Du har gennemført opsætningen af genoprettelsesnøgle.";
+/* Subtitle for the success page after the recovery key has been set up */
+"RecoveryKeyFlow.successSubheading" = "Du er klar til at indbetale, handle og købe krypto fra din BRD-tegnebog.";
+/* Title displayed to the user on the intro screen when unlinking a wallet */
+"RecoveryKeyFlow.unlinkWallet" = "Fjern forbindelsen til din tegnebog fra denne enhed.";
+/* Subtitle displayed to the user on the intro screen when unlinking a wallet. */
+"RecoveryKeyFlow.unlinkWalletSubtext" = "Start en ny tegnebog ved at afkoble din enhed fra den aktuelt installerede tegnebog.";
+/* Warning displayed when the user starts the process of unlinking a wallet */
+"RecoveryKeyFlow.unlinkWalletWarning" = "Tegnebogen skal genoprettes for at genvinde adgangen.";
+/* Title for recovery key intro page */
+"RecoveryKeyFlow.writeItDown" = "Skriv din nøgle ned";
+/* Title for the recovery key landing page if the key has already been generated. */
+"RecoveryKeyFlow.writeKeyAgain" = "Skriv din genoprettelsesnøgle ned igen";
+/* Subtitle for the write recovery key screen */
+"RecoveryKeyFlow.writeKeyScreenSubtitle" = "Skriv følgende ord ned i rækkefølge.";
+/* Title for the write recovery key screen */
+"RecoveryKeyFlow.writeKeyScreenTitle" = "Din Genoprettelsesnøgle";
+/* Title for the step number when the user pages through the recovery words */
+"RecoveryKeyFlow.writeKeyStepTitle" = "%1$@ af %2$@";
 /* No amount entered error message. */
 "RequestAnAmount.noAmount" = "Indtast venligst et beløb først.";
 /* Request a specific amount of bitcoin */
@@ -496,6 +664,12 @@
 "ReScan.subheader1" = "Anslået tid";
 /* Subheader label */
 "ReScan.subheader2" = "Hvornår skal der synkroniseres?";
+/* Rewards view expanded body. */
+"RewardsView.expandedBody" = "Se hvordan du kan spare på handelsgebyrer og låse op for fremtidige gevinster.";
+/* Rewards view expanded title. */
+"RewardsView.expandedTitle" = "Introduktion til BRD-belønninger.";
+/* Rewards view title */
+"RewardsView.normalTitle" = "Belønninger";
 /* Scan bitcoin address camera flash toggle */
 "Scanner.flashButtonLabel" = "Kamerablitz";
 /* Complete filter label */
@@ -512,8 +686,11 @@
 "SecurityCenter.faceIdTitle" = "Face ID";
 /* Paper Key button description */
 "SecurityCenter.paperKeyDescription" = "Den eneste måde at få adgang til dine bitcoin på, hvis du mister eller opgraderer din telefon.";
-/* Paper Key button title */
+/* Recovery Key button title. This used to be called 'paper key', so leaving the string key as `paperKeyTitle` in order
+ * to not break existing client code. */
 "SecurityCenter.paperKeyTitle" = "Paper key";
+/* Paper Key button title */
+"SecurityCenter.paperKeyTitle.android" = "Paper key";
 /* PIN button description */
 "SecurityCenter.pinDescription" = "Beskytter dit BRD mod uberettigede brugere.";
 /* PIN button title */
@@ -524,6 +701,18 @@
 "SecurityCenter.touchIdTitle" = "Touch ID";
 /* Security center fingerprint authentication button */
 "SecurityCenter.touchIdTitle.android" = "Autentificering via fingeraftryk";
+/* Segwit enabled confirmation title */
+"Segwit.ConfirmationConfirmationTitle" = "Du har aktiveret SegWit!";
+/* Segwit enabled confirmation description */
+"Segwit.ConfirmationInstructionsDescription" = "Tak for at hjælpe med at skubbe bitcoin fremad.";
+/* Segwit instructions */
+"Segwit.ConfirmationInstructionsInstructions" = "SegWit-support er stadig en beta funktion.\nNår SegWit er aktiveret, vil det ikke være muligt\nat deaktivere det. Du kan finde legacy-adressen under Indstillinger.\nNogle tredjepartstjenester, herunder kryptohandel, kan være utilgængelige for brugere, der har aktiveret SegWit. I tilfælde af en nødsituation vil du kunne generere en legacy-adresse fra Indstillinger > Bitcoin-Indstillinger.\nSegWit vil automatisk blive aktiveret for alle\nbrugere i en fremtidig opdatering.";
+/* Segwit extra confirmation title. */
+"Segwit.ConfirmChoiceLayout" = "Aktivering af SegWit er en irreversibel funktion. Er du sikker på, at du vil fortsætte?";
+/* Segwit enableButton */
+"Segwit.Enable" = "Aktiver";
+/* Segwit button label that takes the user back to the home screen once SegWit is enabled. */
+"Segwit.HomeButton" = "Til månen";
 /* Send money amount label */
 "Send.amountLabel" = "Beløb";
 /* Balance: $4.00 */
@@ -586,6 +775,8 @@
 "Send.scanLabel" = "Scan";
 /* Send button label (the action, "press here to send") */
 "Send.sendLabel" = "Send";
+/* Send button label (for special case where the user specified send amount is too high and does not leave a balance to cover fees.) */
+"Send.sendMaximum" = "Send maksimumsbeløb?";
 /* Send screen title (as in "this is the screen for sending money") */
 "Send.title" = "Send penge";
 /* Send money to label */
@@ -602,6 +793,10 @@
 "Settings.advanced" = "Avanceret";
 /* Advanced Settings title */
 "Settings.advancedTitle" = "Avancerede indstillinger";
+/* ATM map menu item title explaining that it's a feature only available in the USA */
+"Settings.atmMapMenuItemSubtitle" = "Kun tilgængelig i USA";
+/* ATM map menu item title */
+"Settings.atmMapMenuItemTitle" = "Crypto ATM-kort";
 /* i.e. the currency which will be displayed */
 "Settings.currency" = "Vis valuta";
 /* e.g. "USD Settings" (settings for how USD is handled) */
@@ -610,6 +805,8 @@
 "Settings.currencySettings" = "Valutaindstillinger";
 /* Join Early access label */
 "Settings.earlyAccess" = "Tilmeld dig Early Access";
+/* Enable segwit. */
+"Settings.EnableSegwit" = "Aktivér Segwit";
 /* Are you enjoying bread alert message body */
 "Settings.enjoying" = "Nyder du BRD?";
 /* Face ID spending limit label */
@@ -628,6 +825,8 @@
 "Settings.resetCurrencies" = "Nulstil til standard valutaer";
 /* Leave review button label */
 "Settings.review" = "Giv os en anmeldelse";
+/* Rewards menu item */
+"Settings.rewards" = "Belønninger";
 /* Share anonymous data label */
 "Settings.shareData" = "Del anonyme data";
 /* Sync blockchain label */
@@ -638,6 +837,12 @@
 "Settings.touchIdLimit" = "Touch ID brugsgrænse";
 /* The fingerprint spending limit */
 "Settings.touchIdLimit.android" = "Brugsgrænse for autentificering via fingeraftryk";
+/* View legacy address (old format). */
+"Settings.ViewLegacyAddress" = "Vis Legacy Modtagelsesadresse";
+/* Receive Bitcoin instructions */
+"Settings.ViewLegacyAddressReceiveDescription" = "Send kun Bitcoin (BTC) til denne adresse. Ethvert andet aktiv, der sendes til denne adresse, vil gå tabt permanent.";
+/* Receive Bitcoin */
+"Settings.ViewLegacyAddressReceiveTitle" = "Modtag Bitcoin";
 /* Wallet Settings section header */
 "Settings.wallet" = "Wallet";
 /* Unlink/delete your wallet from the current device. */
@@ -652,16 +857,20 @@
 "StartPaperPhrase.againButtonTitle" = "Skriv paper key ned igen";
 /* Paper key explanation text. */
 "StartPaperPhrase.body" = "Din paper key er den eneste måde at gendanne dit BRD på, hvis din telefon mistes, stjæles, går i stykker eller opgraderes.\n\nVi viser dig en liste over word du skal skrive ned på et papir, og holde sikkert.";
+/* Paper key explanation text (Android-version) */
+"StartPaperPhrase.Body.Android" = "Din papirnøgle er den eneste måde hvorpå du kan gendanne din BRD, hvis din telefon går tabt, bliver stjålet, ødelagt eller opgraderet.\n\nDin papirnøgle er også påkrævet, hvis du ændrer sikkerhedsindstillingerne på din enhed.\n\nVi viser dig en liste med ord, som du skal skrive ned på et stykke papir og opbevare sikkert.";
 /* button label */
 "StartPaperPhrase.buttonTitle" = "Skriv paper key ned";
-/* Argument is date */
-"StartPaperPhrase.date" = "Du skrev sidst din paper key ned den %1$@";
+/* Argument is date; date should be on a new line */
+"StartPaperPhrase.date" = "Du skrev sidst din paper key ned den \n%1$@";
 /* button label */
 "StartViewController.createButton" = "Opret ny tegnebog";
 /* Start view message */
 "StartViewController.message" = "Den mest sikre og trygge måde at bruge bitcoins på.";
 /* Recover your wallet from a backup */
 "StartViewController.recoverButton" = "Gendan tegnebog";
+/* Syncing view done syncing state header text */
+"SyncingView.activity" = "Aktivitet";
 /* Syncing view connectiong state header text */
 "SyncingView.connecting" = "Tilslutter";
 /* The sync has failed (to complete) */
@@ -786,6 +995,9 @@
 "TransactionDetails.commentsPlaceholder" = "Tilføj memo...";
 /* Timestamp section header for complete tx */
 "TransactionDetails.completeTimestampHeader" = "Gennemført";
+/* Block height and confirmations label
+eg. 182930 (45061 confirmations) */
+"TransactionDetails.confirmationsLabel" = "Bekræftelser";
 /* Empty transaction list message. */
 "TransactionDetails.emptyMessage" = "Dine transaktioner vil vises her.";
 /* e.g. the users balance after the transaction was compeleted */

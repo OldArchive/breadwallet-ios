@@ -14,9 +14,9 @@ enum PinViewStyle {
     case verify
 }
 
-class PinView : UIView {
+class PinView: UIView {
 
-    //MARK: - Public
+    // MARK: - Public
     var itemSize: CGFloat {
         switch style {
         case .create:
@@ -27,9 +27,11 @@ class PinView : UIView {
             return 24.0
         }
     }
+    
     var width: CGFloat {
         return (itemSize + C.padding[1]) * CGFloat(length)
     }
+    
     let shakeDuration: CFTimeInterval = 0.6
     fileprivate var shakeCompletion: (() -> Void)?
 
@@ -63,12 +65,12 @@ class PinView : UIView {
 
     func shake(completion: (() -> Void)? = nil) {
         shakeCompletion = completion
-        let translation = CAKeyframeAnimation(keyPath: "transform.translation.x");
-        translation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        let translation = CAKeyframeAnimation(keyPath: "transform.translation.x")
+        translation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         translation.values = [-5, 5, -5, 5, -3, 3, -2, 2, 0]
 
-        let rotation = CAKeyframeAnimation(keyPath: "transform.rotation.y");
-        rotation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        let rotation = CAKeyframeAnimation(keyPath: "transform.rotation.y")
+        rotation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
 
         rotation.values = [-5, 5, -5, 5, -3, 3, -2, 2, 0].map {
             self.toRadian(value: $0)
@@ -80,7 +82,7 @@ class PinView : UIView {
         self.layer.add(shakeGroup, forKey: "shakeIt")
     }
 
-    //MARK: - Private
+    // MARK: - Private
     private let unFilled: [UIView]
     private var filled: [UIView]
     private let style: PinViewStyle
@@ -110,7 +112,13 @@ class PinView : UIView {
             if index == 0 {
                 leadingConstraint = circle.constraint(.leading, toView: self, constant: 0.0)
             } else {
-                leadingConstraint = NSLayoutConstraint(item: circle, attribute: .leading, relatedBy: .equal, toItem: circles[index - 1], attribute: .trailing, multiplier: 1.0, constant: padding)
+                leadingConstraint = NSLayoutConstraint(item: circle,
+                                                       attribute: .leading,
+                                                       relatedBy: .equal,
+                                                       toItem: circles[index - 1],
+                                                       attribute: .trailing,
+                                                       multiplier: 1.0,
+                                                       constant: padding)
             }
             circle.constrain([
                 circle.constraint(.width, constant: itemSize + extraWidth),
@@ -125,7 +133,7 @@ class PinView : UIView {
     }
 }
 
-extension PinView : CAAnimationDelegate {
+extension PinView: CAAnimationDelegate {
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         shakeCompletion?()
     }

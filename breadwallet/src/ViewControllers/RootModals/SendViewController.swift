@@ -15,17 +15,20 @@ typealias PresentScan = ((@escaping ScanCompletion) -> Void)
 private let verticalButtonPadding: CGFloat = 32.0
 private let buttonSize = CGSize(width: 52.0, height: 32.0)
 
-class SendViewController : UIViewController, Subscriber, ModalPresentable, Trackable {
+// TODO: refactor
+// swiftlint:disable type_body_length
 
-    //MARK - Public
+class SendViewController: UIViewController, Subscriber, ModalPresentable, Trackable {
+
+    // MARK: - Public
     var presentScan: PresentScan?
-    var presentVerifyPin: ((String, @escaping ((String) -> Void))->Void)?
-    var onPublishSuccess: (()->Void)?
+    var presentVerifyPin: ((String, @escaping ((String) -> Void)) -> Void)?
+    var onPublishSuccess: (() -> Void)?
     var parentView: UIView? //ModalPresentable
     
     var isPresentedFromLock = false
 
-    init(sender: Sender, currency: CurrencyDef, initialRequest: PaymentRequest? = nil) {
+    init(sender: Sender, currency: Currency, initialRequest: PaymentRequest? = nil) {
         self.currency = currency
         self.sender = sender
         self.initialRequest = initialRequest
@@ -33,11 +36,11 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
         amountView = AmountViewController(currency: currency, isPinPadExpandedAtLaunch: false)
 
         super.init(nibName: nil, bundle: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notification:)), name: .UIKeyboardWillShow, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: .UIKeyboardWillHide, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notification:)), name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: UIResponder.keyboardWillHideNotification, object: nil)
     }
 
-    //MARK - Private
+    // MARK: - Private
     deinit {
         Store.unsubscribe(self)
         NotificationCenter.default.removeObserver(self)
@@ -51,14 +54,15 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
     private var currencySwitcherHeightConstraint: NSLayoutConstraint?
     private var pinPadHeightConstraint: NSLayoutConstraint?
     private let confirmTransitioningDelegate = PinTransitioningDelegate()
+    private let sendingActivity = BRActivityViewController(message: S.TransactionDetails.titleSending)
     
     private let sender: Sender
-    private let currency: CurrencyDef
+    private let currency: Currency
     private let initialRequest: PaymentRequest?
     private var validatedProtoRequest: PaymentProtocolRequest?
     private var didIgnoreUsedAddressWarning = false
     private var didIgnoreIdentityNotCertified = false
-    private var feeSelection: FeeLevel? = nil
+    private var feeSelection: FeeLevel?
     private var balance: UInt256 = 0
     private var amount: Amount? {
         didSet {
@@ -72,6 +76,7 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
             return addressCell.address
         }
     }
+
     // MARK: - Lifecycle
     override func viewDidLoad() {
         view.backgroundColor = .white
@@ -112,12 +117,7 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
         })
         Store.subscribe(self, selector: { $0[self.currency]?.fees != $1[self.currency]?.fees }, callback: { [unowned self] in
             guard let fees = $0[self.currency]?.fees else { return }
-            self.sender.updateFeeRates(fees, level: self.feeSelection)
-            if self.currency is Bitcoin {
-                self.amountView.canEditFee = (fees.regular != fees.economy) || self.currency.matches(Currencies.btc)
-            } else {
-                self.amountView.canEditFee = false
-            }
+            self.sender.updateFeeRates(fees, toLevel: self.feeSelection)
         })
         
         if currency.matches(Currencies.eth) || currency is ERC20Token {
@@ -177,7 +177,7 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
             guard myself.currency is Bitcoin else { return }
             myself.feeSelection = fee
             if let fees = myself.currency.state?.fees {
-                myself.sender.updateFeeRates(fees, level: fee)
+                myself.sender.updateFeeRates(fees, toLevel: fee)
             }
             myself.amountView.updateBalanceLabel()
         }
@@ -213,14 +213,14 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
             }
         }
         
-        let attributes: [NSAttributedStringKey: Any] = [
-            NSAttributedStringKey.font: UIFont.customBody(size: 14.0),
-            NSAttributedStringKey.foregroundColor: color
+        let attributes: [NSAttributedString.Key: Any] = [
+            NSAttributedString.Key.font: UIFont.customBody(size: 14.0),
+            NSAttributedString.Key.foregroundColor: color
         ]
         
-        let feeAttributes: [NSAttributedStringKey: Any] = [
-            NSAttributedStringKey.font: UIFont.customBody(size: 14.0),
-            NSAttributedStringKey.foregroundColor: feeColor
+        let feeAttributes: [NSAttributedString.Key: Any] = [
+            NSAttributedString.Key.font: UIFont.customBody(size: 14.0),
+            NSAttributedString.Key.foregroundColor: feeColor
         ]
         
         if sender is GasEstimator {
@@ -231,7 +231,7 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
     }
     
     @objc private func pasteTapped() {
-        guard let pasteboard = UIPasteboard.general.string, pasteboard.utf8.count > 0 else {
+        guard let pasteboard = UIPasteboard.general.string, !pasteboard.utf8.isEmpty else {
             return showAlert(title: S.Alert.error, message: S.Send.emptyPasteboard, buttonLabel: S.Button.ok)
         }
 
@@ -254,7 +254,7 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
     }
     
     private func validateSendForm() -> Bool {
-        guard let address = address, address.count > 0 else {
+        guard let address = address, !address.isEmpty else {
             showAlert(title: S.Alert.error, message: S.Send.noAddress, buttonLabel: S.Button.ok)
             return false
         }
@@ -313,13 +313,6 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
             let amount = amount,
             let address = address else { return }
         
-        if let gasEstimator = sender as? GasEstimator {
-            guard gasEstimator.hasFeeForAddress(address, amount: amount) else {
-                showAlert(title: S.Alert.error, message: S.Send.noFeesError, buttonLabel: S.Button.ok)
-                return
-            }
-        }
-        
         let fee = sender.fee(forAmount: amount.rawValue) ?? UInt256(0)
         let feeCurrency = (currency is ERC20Token) ? Currencies.eth : currency
         
@@ -334,7 +327,7 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
 
         let confirm = ConfirmationViewController(amount: displyAmount,
                                                  fee: feeAmount,
-                                                 feeType: feeSelection ?? .regular,
+                                                 displayFeeLevel: feeSelection ?? .regular,
                                                  address: address,
                                                  isUsingBiometrics: sender.canUseBiometrics,
                                                  currency: currency)
@@ -345,6 +338,7 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
         confirm.transitioningDelegate = confirmTransitioningDelegate
         confirm.modalPresentationStyle = .overFullScreen
         confirm.modalPresentationCapturesStatusBarAppearance = true
+
         present(confirm, animated: true, completion: nil)
         return
     }
@@ -392,35 +386,41 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
 
     private func send() {
         let pinVerifier: PinVerifier = { [weak self] pinValidationCallback in
-            self?.presentVerifyPin?(S.VerifyPin.authorize) { pin in
-                self?.parent?.view.isFrameChangeBlocked = false
-                pinValidationCallback(pin)
+            guard let `self` = self else { return assertionFailure() }
+
+            self.sendingActivity.dismiss(animated: false) {
+                self.presentVerifyPin?(S.VerifyPin.authorize) { pin in
+                    self.parent?.view.isFrameChangeBlocked = false
+                    pinValidationCallback(pin)
+                    self.present(self.sendingActivity, animated: false)
+                }
             }
         }
-        
+
+        present(sendingActivity, animated: true)
         sender.sendTransaction(allowBiometrics: true, pinVerifier: pinVerifier, abi: nil) { [weak self] result in
             guard let `self` = self else { return }
-            switch result {
-            case .success:
-                self.dismiss(animated: true, completion: {
-                    Store.trigger(name: .showStatusBar)
-                    if self.isPresentedFromLock {
-                        Store.trigger(name: .loginFromSend)
+            self.sendingActivity.dismiss(animated: true) {
+                switch result {
+                case .success:
+                    self.dismiss(animated: true) {
+                        Store.trigger(name: .showStatusBar)
+                        if self.isPresentedFromLock {
+                            Store.trigger(name: .loginFromSend)
+                        }
+                        self.onPublishSuccess?()
                     }
-                    self.onPublishSuccess?()
-                })
-                self.saveEvent("send.success")
-            case .creationError(let message):
-                self.showAlert(title: S.Send.createTransactionError, message: message, buttonLabel: S.Button.ok)
-                self.saveEvent("send.publishFailed", attributes: ["errorMessage": message])
-            case .publishFailure(let error):
-                if case .posixError(let code, let description) = error {
-                    self.showAlert(title: S.Alerts.sendFailure, message: "\(description) (\(code))", buttonLabel: S.Button.ok)
-                    self.saveEvent("send.publishFailed", attributes: ["errorMessage": "\(description) (\(code))"])
+                    self.saveEvent("send.success")
+                case .creationError(let message):
+                    self.showAlert(title: S.Alerts.sendFailure, message: message, buttonLabel: S.Button.ok)
+                    self.saveEvent("send.publishFailed", attributes: ["errorMessage": message])
+                case .publishFailure(let error):
+                    self.showAlert(title: S.Alerts.sendFailure, message: "\(error.message) (\(error.code))", buttonLabel: S.Button.ok)
+                    self.saveEvent("send.publishFailed", attributes: ["errorMessage": "\(error.message) (\(error.code))"])
+                case .insufficientGas(let rpcErrorMessage):
+                    self.showInsufficientGasError()
+                    self.saveEvent("send.publishFailed", attributes: ["errorMessage": rpcErrorMessage])
                 }
-            case .insufficientGas(let rpcErrorMessage):
-                self.showInsufficientGasError()
-                self.saveEvent("send.publishFailed", attributes: ["errorMessage": rpcErrorMessage])
             }
         }
     }
@@ -457,13 +457,15 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
             let amount = Amount(amount: UInt256(minOutput), currency: currency, rate: Rate.empty)
             let message = String(format: S.PaymentProtocol.Errors.smallTransaction, amount.tokenDescription)
             return showAlert(title: S.PaymentProtocol.Errors.smallOutputErrorTitle, message: message, buttonLabel: S.Button.ok)
+
+        case .insufficientFunds:
+            return showAlert(title: S.Alert.error, message: S.Send.insufficientFunds, buttonLabel: S.Button.ok)
             
         case .ok:
             self.validatedProtoRequest = protoReq
-            break
             
         default:
-            // unhandled error
+            assertionFailure("unhandled error")
             print("[SEND] payment request validation error: \(result)")
             return
         }
@@ -520,7 +522,7 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
         present(alertController, animated: true, completion: nil)
     }
 
-    //MARK: - Keyboard Notifications
+    // MARK: - Keyboard Notifications
     @objc private func keyboardWillShow(notification: Notification) {
         copyKeyboardChangeAnimation(notification: notification)
     }
@@ -543,12 +545,12 @@ class SendViewController : UIViewController, Subscriber, ModalPresentable, Track
     }
 }
 
-extension SendViewController : ModalDisplayable {
+extension SendViewController: ModalDisplayable {
     var faqArticleId: String? {
         return ArticleIds.sendTx
     }
     
-    var faqCurrency: CurrencyDef? {
+    var faqCurrency: Currency? {
         return currency
     }
 

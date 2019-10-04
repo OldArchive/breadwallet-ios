@@ -22,6 +22,8 @@
 "AccessibilityLabels.faq" = "支持中心";
 /* Account balance */
 "Account.balance" = "余额";
+/* Delisted token alert banner message */
+"Account.delistedToken" = "这种代币已被摘牌，因为发行者决定停止支持 ERC20。\n\n您仍然可以将这些代币汇到别的平台。请访问我们的支持页面获取更多细节。";
 /* $10000 per BTC */
 "Account.exchangeRate" = "%1$@ / %2$@";
 /* Loading Wallet Message */
@@ -36,10 +38,16 @@
 "Alert.keystore.generic.android" = "您的安卓操作系统密钥库存在问题，请联系support@breadwallet.com";
 /* KeyStore error, keys are invalidated */
 "Alert.keystore.invalidated.android" = "您的 BRD 加密数据最近因为您的安卓系统屏幕锁定被禁用而失效。";
+/* Warn user key store data has been invalidate because the user changed their security settings. The user must uninstall. */
+"Alert.keystore.invalidated.uninstall.android" = "我们无法继续，因为您的屏幕锁定设置已更改(例如，密码已禁用，指纹已更改)。出于安全考虑，安卓已永久锁定了您的密钥存储。因此，您必须通过卸载删除BRD应用数据。\n\n请放心，您的资金很安全！ 重新安装应用后才能用纸质密匙还原您的钱包。";
+/* Warn user key store data has been invalidate because the user changed their security settings. The user must wipe their app data. */
+"Alert.keystore.invalidated.wipe.android" = "我们无法继续，因为您的屏幕锁定设置已更改(例如，密码已禁用，指纹已更改)。出于安全考虑，安卓已永久锁定了您的密钥存储。因此，必须擦除您的BRD应用数据。\n\n请放心，您的资金很安全！ 用你的纸质密匙还原您的钱包。";
 /* Keystore error title */
 "Alert.keystore.title.android" = "安卓系统密钥库错误";
 /* No internet alert message */
 "Alert.noInternet" = "未发现互联网连接。检查您的连接并重试。";
+/* General error message */
+"Alert.somethingWentWrong" = "出错了。请重试。";
 /* Request timed out error message */
 "Alert.timedOut" = "请求超时。请检查您的连接，然后重试。";
 /* Warning alert title */
@@ -114,30 +122,52 @@
 "Button.buy" = "购买";
 /* Cancel button label */
 "Button.cancel" = "取消";
+/* Confirm button title */
+"Button.confirm" = "确认";
+/* Button label to open a email compose window with our support email in the to field. */
+"Button.contactSupport.android" = "联系支持人员";
 /* prompt continue button */
 "Button.continueAction" = "继续";
 /* prompt dismiss button */
 "Button.dismiss" = "撤销";
+/* Done button title */
+"Button.done" = "完成";
 /* Button to return to the "home" screen (the home screen is the top menu). */
 "Button.Home" = "主页";
 /* Ignore button label */
 "Button.ignore" = "忽略";
+/* Maybe Later button label */
+"Button.maybeLater" = "也许以后";
 /* menu button */
 "Button.menu" = "菜单";
+/* More information button */
+"Button.moreInfo" = "更多信息";
 /* No button */
 "Button.no" = "不";
 /* OK button label */
 "Button.ok" = "好";
+/* Open Settings button */
+"Button.openSettings" = "打开设置";
 /* receive button */
 "Button.receive" = "收到";
+/* Button label to open Security Settings. */
+"Button.securitySettings.android" = "安全中心";
 /* Click this button to sell an asset */
 "Button.sell" = "出售";
 /* send button */
 "Button.send" = "发送";
 /* Settings button label */
 "Button.settings" = "设置";
+/* Setup button label */
+"Button.setup" = "设置";
+/* Skip button title */
+"Button.skip" = "跳过";
 /* Settings button label */
 "Button.submit" = "提交";
+/* Button label to uninstall the app. */
+"Button.uninstall.android" = "卸载";
+/* Button label to wipe the user's application data. */
+"Button.wipe.android" = "擦除";
 /* Yes button */
 "Button.yes" = "是";
 /* Camera plugin instruction */
@@ -146,6 +176,8 @@
 "Confirmation.amountLabel" = "发送金额：";
 /* Network Fee: ($1.00) */
 "Confirmation.feeLabel" = "网络费：";
+/* Network Fee: (ETH) */
+"Confirmation.feeLabelETH" = "网络费 (ETH):";
 /* eg. Processing time: This transaction is predicted to complete in [10-60 minutes]. */
 "Confirmation.processingTime" = "处理时间：预计此交易将在 %1$@ 后完成。";
 /* Label for "send" button on final confirmation screen */
@@ -178,6 +210,8 @@
 "DefaultCurrency.rateLabel" = "汇率";
 /* The wallet is disabled. */
 "Disabled.title" = "钱包已禁用";
+/* Share address by e-mail subject */
+"Email.address_subject" = "%1$s地址";
 /* Service capabilities description */
 "EME.permissions.accountRequest" = "请求%1$@ 帐户信息";
 /* Service capabilities description */
@@ -222,16 +256,24 @@
 "FeeSelector.estimatedDeliver" = "预计交付时间：%1$@";
 /* [This transaction will complete in] 2-5 minutes */
 "FeeSelector.ethTime" = "2-5 分钟";
+/* Priority fee */
+"FeeSelector.priority" = "优先";
+/* E.g. [This transaction is predicted to complete in] 10-30 minutes */
+"FeeSelector.priorityTime" = "10-30 分钟";
 /* Regular fee */
 "FeeSelector.regular" = "常规";
 /* E.g. [This transaction is predicted to complete in] 10-60 minutes */
 "FeeSelector.regularTime" = "10-60 分钟";
 /* Fee Selector title */
 "FeeSelector.title" = "处理速度";
+/* Label for the Android file chooser when we need to prompt the user to select an image file. */
+"FileChooser.selectImageSource.android" = "选择图像源";
 /* This is the section that allows administration of the user's wallet */
 "HomeScreen.admin" = "管理";
 /* Home screen menu button to buy some bitcoin */
 "HomeScreen.buy" = "购买";
+/* home screen toolbar 'Buy & Sell' button */
+"HomeScreen.buyAndSell" = "买卖";
 /* Menu button on the home screen toolbar */
 "HomeScreen.menu" = "菜单";
 /* This section lists the users wallets */
@@ -340,6 +382,14 @@
 "MenuViewController.modalTitle" = "菜单";
 /* button label */
 "MenuViewController.recoverButton" = "恢复钱包";
+/* Paper Key Skip modal body (Android-version) */
+"Modal.PaperKeySkip.Body.Android" = "更改手机安全设置后,打开钱包需要输入纸钥。\n\n您希望稍后再设置纸钥吗？";
+/* Paper Key Skip modal Continue Set Up button */
+"Modal.PaperKeySkip.Button.ContinueSetUp" = "继续设置";
+/* Paper Key Skip modal I'll do it later button */
+"Modal.PaperKeySkip.Button.IllDoItLater" = "稍后进行";
+/* Paper Key Skip modal title */
+"Modal.PaperKeySkip.Title" = "注意";
 /* Switch to automatic mode button label */
 "NodeSelector.automaticButton" = "切换到自动模式";
 /* Node is connected label */
@@ -360,6 +410,30 @@
 "NodeSelector.statusLabel" = "节点连接状态";
 /* Node Selector view title */
 "NodeSelector.title" = "比特币节点";
+/* Onboarding screen 'I'll browse first' button */
+"Onboarding.browseFirst" = "我要先浏览一下";
+/* Onboarding screen 'Buy some coin' button */
+"Onboarding.buyCoin" = "购买一些钱币";
+/* Onboarding screen 'Get started' (create new wallet) button */
+"Onboarding.getStarted" = "开始";
+/* Onboarding screen 'Next' button */
+"Onboarding.next" = "下一步";
+/* Onboarding screen restore an existing wallet. */
+"Onboarding.restoreWallet" = "恢复钱包";
+/* Onboarding screen Skip button title that allows the user to exit the onboarding process. */
+"Onboarding.skip" = "跳过";
+/* Onboarding screen Page 4 title */
+"OnboardingPageFour.title" = "今天就开始投资吧,只需 50 美元！";
+/* Onboarding screen Page 1 title */
+"OnboardingPageOne.title" = "欢迎来到你新的世界钱包！";
+/* Onboarding screen Page 3 subtitle */
+"OnboardingPageThree.subtitle" = "轻松又安全地与 BRD 进行投资和多样化";
+/* Onboarding screen Page 3 title */
+"OnboardingPageThree.title" = "购买并交易比特币,代币和其他数字货币。";
+/* Onboarding screen Page 2 subtitle */
+"OnboardingPageTwo.subtitle" = "我们有价值超过 600 亿美元的资产受到保护。";
+/* Onboarding screen Page 2 title */
+"OnboardingPageTwo.title" = "加入全球数百万人信赖的BRD。";
 /* Eg. Send 1.0Eth to purchase CCC */
 "PaymentConfirmation.amountText" = "发送%1$@以购买%2$@";
 /* Payment confirmation view title */
@@ -382,6 +456,18 @@
 "PaymentProtocol.Errors.unsupportedSignatureType" = "不受支持的签名类型";
 /* Untrusted certificate payment protocol error message */
 "PaymentProtocol.Errors.untrustedCertificate" = "不可信证书";
+/* Body text for a prompt that asks the user to subscribe to email updates to find out product updates. */
+"Prompts.Email.body" = "率先接收重要支持和产品更新";
+/* Placeholder text for an email address text field. */
+"Prompts.Email.placeholder" = "输入您的电子邮箱";
+/* Body text that is shown when the user successfully subscribes to email updates. */
+"Prompts.Email.successBody" = "您已成功订阅接收更新";
+/* Text that is displayed as a footnote when the user successfully subscribes to email updates. */
+"Prompts.Email.successFootnote" = "我们感谢您的持续支持";
+/* Title that is shown when the user successfully subscribes to email updates. */
+"Prompts.Email.successTitle" = "谢谢！";
+/* Title for a prompt that asks the user to subscribe to email updates to find out product updates. */
+"Prompts.Email.title" = "加入";
 /* Enable face ID prompt body */
 "Prompts.FaceId.body" = "点击继续开启面部识别";
 /* Enable face ID prompt title */
@@ -390,12 +476,14 @@
 "Prompts.NoPasscode.body" = "需要设备密码才能保护您的钱包。转到设置并开启密码。";
 /* No Passcode set warning title */
 "Prompts.NoPasscode.title" = "开启设备密码";
-/* Instruction how to enable device encryption */
+/* Instructions on how to enable screen lock settings */
 "Prompts.NoScreenLock.body.android" = "需要设备屏幕锁定才能保护您的钱包。在“设置”>“安全”>“屏幕锁定”中启用它以便继续。";
 /* Device encryption prompt title */
 "Prompts.NoScreenLock.title.android" = "屏幕锁定已禁用";
-/* Warning about paper key. */
-"Prompts.PaperKey.body" = "为了应对手机丢失或者更换， 请您务必写下你的纸键。点击此处继续。";
+/* Warning about recovery key (formerly paper key). */
+"Prompts.PaperKey.body" = "为了应对手机丢失或者更换， 请您务必写下你的纸键。";
+/* Warning about paper key (Android-version) */
+"Prompts.PaperKey.Body.Android" = "设置纸钥,避免手机丢失或更换带来的不便。您需要提供密钥以更改手机安全设置。";
 /* An action is required (You must do this action). */
 "Prompts.PaperKey.title" = "需要采取的行动";
 /* Transaction rejected prompt body */
@@ -420,20 +508,32 @@
 "Prompts.UpgradePin.body" = "BRD 已升级到使用 6 位 PIN。点击此处升级。";
 /* Upgrade PIN prompt title. */
 "Prompts.UpgradePin.title" = "升级 PIN";
-/* Notifications will be added later but users can set their preferences now, which is why we specify "in the future". */
-"PushNotifications.body" = "打开推送通知，以便将来从 BRD 接收特殊消息。";
+/* Body text for the push notifications prompt. */
+"PushNotifications.body" = "打开推送通知，抢先了解新功能和特惠。";
 /* Push notifications are disabled alert title" */
 "PushNotifications.disabled" = "提示已禁用";
-/* Push notifications settings instructions */
-"PushNotifications.enableInstructions" = "在设置里开启提示以接收提醒";
+/* Body text when push notifications are disabled. */
+"PushNotifications.disabledBody" = "开启接收 BRD 特惠版更新通知。";
+/* Body text when push notifications are enabled. */
+"PushNotifications.enabledBody" = "您正在接收 BRD 特惠版更新。";
+/* Instructions to enable push notifications for BRD in the phone's system settings. */
+"PushNotifications.enableInstructions" = "疑似关闭通知。请进入设置启用 BRD 通知。";
 /* Push notifications toggle switch label */
-"PushNotifications.label" = "推送通知";
+"PushNotifications.label" = "接收推送通知";
 /* Push notifications are off label */
 "PushNotifications.off" = "关闭";
 /* Push notifications are on label */
 "PushNotifications.on" = "开启";
 /* Push notifications settings view title label */
-"PushNotifications.title" = "通知";
+"PushNotifications.title" = "敬请保持同步";
+/* Google play review prompt body */
+"RateAppPrompt.Body.Android" = "如果您喜欢我们的应用程式，请花点时间对其进行评分并给我们一个评论。";
+/* Google play review prompt, revivew button */
+"RateAppPrompt.Button.Dismiss.Android" = "不了，谢谢。";
+/* Google play review prompt, dismiss button */
+"RateAppPrompt.Button.RateApp.Android" = "评价BRD";
+/* Google play review prompt title */
+"RateAppPrompt.Title.Android" = "评价BRD";
 /* Address copied message. */
 "Receive.copied" = "已复制到剪贴板。";
 /* Share via email button label */
@@ -470,6 +570,74 @@
 "RecoverWallet.subheader" = "输入您想恢复的钱包的纸键。";
 /* Reset PIN with paper key: sub-header */
 "RecoverWallet.subheader_reset_pin" = "要重置 PIN 码，请在下面的框中输入纸上密钥中的单词。";
+/* Instructs the user to enter words from the set of recovery key words. */
+"RecoveryKeyFlow.confirmRecoveryInputError" = "您输入的字词不正确。请再试一次。";
+/* Instructs the user to enter words from the set of recovery key words. */
+"RecoveryKeyFlow.confirmRecoveryKeySubtitle" = "就快完成了！请输入以下来自您的恢复密钥中的字词。";
+/* Title for the confirmation step of the recovery key flow. */
+"RecoveryKeyFlow.confirmRecoveryKeyTitle" = "确认恢复密钥";
+/* Title displayed when the user starts the process of entering a recovery key */
+"RecoveryKeyFlow.enterRecoveryKey" = "输入恢复密钥";
+/* Subtitle displayed when the user starts the process of entering a recovery key */
+"RecoveryKeyFlow.enterRecoveryKeySubtitle" = "请输入恢复密钥以取消此钱包与设备的关联。";
+/* Body text for an alert dialog asking the user whether to set up the recovery key later */
+"RecoveryKeyFlow.exitRecoveryKeyPromptBody" = "您确定要稍后设置恢复密钥吗？";
+/* Title for an alert dialog asking the user whether to set up the recovery key later */
+"RecoveryKeyFlow.exitRecoveryKeyPromptTitle" = "稍后设置";
+/* Button text for the 'Generate Recovery Key' button */
+"RecoveryKeyFlow.generateKeyButton" = "生成恢复密钥";
+/* Subtext for the recovery key landing page. */
+"RecoveryKeyFlow.generateKeyExplanation" = "如果您升级或丢失手机,需要使用此密钥来恢复您的财产。";
+/* Default title for the recovery key landing page */
+"RecoveryKeyFlow.generateKeyTitle" = "生成您的私有恢复密钥";
+/* Title for a button that takes the user to the wallet after setting up the recovery key. */
+"RecoveryKeyFlow.goToWalletButtonTitle" = "前往钱包";
+/* Hint text for recovery key intro page, e.g., Step 2 */
+"RecoveryKeyFlow.howItWorksStep" = "如何进行 - 第 %1$@ 步";
+/* Error text displayed when the user enters an incorrect recovery key */
+"RecoveryKeyFlow.invalidPhrase" = "您输入的部分字词与恢复密钥不匹配。请再试一次。";
+/* Title for recovery key intro page */
+"RecoveryKeyFlow.keepSecure" = "妥善保管";
+/* Informs the user that the recovery is only required for recovering a wallet. */
+"RecoveryKeyFlow.keyUseHint" = "您的密钥仅用于恢复时,日常访问钱包时无需此密钥。";
+/* Reminds the user not to take screenshots or email the recovery key words */
+"RecoveryKeyFlow.noScreenshotsOrEmailWarning" = "出于安全考虑,请勿截图或通过电子邮件发送这些字词";
+/* Recommends that the user avoids capturing the paper key with a screenshot */
+"RecoveryKeyFlow.noScreenshotsRecommendation" = "请将您的密钥记录在纸上并确认无误。为安全起见,不建议使用屏幕截图。";
+/* Title displayed when the user starts the process of recovering a wallet */
+"RecoveryKeyFlow.recoveryYourWallet" = "恢复您的钱包";
+/* Subtitle displayed when the user starts the process of recovering a wallet */
+"RecoveryKeyFlow.recoveryYourWalletSubtitle" = "请输入您想要恢复的钱包的恢复密钥。";
+/* Title for recovery key intro page */
+"RecoveryKeyFlow.relaxBuyTrade" = "放心,购买和交易";
+/* Reminds the user to write down the recovery key words. */
+"RecoveryKeyFlow.rememberToWriteDownReminder" = "请记得将这些字词写下来。如果您忘记了,请滑动以返回。";
+/* Instruction displayed when the user is resetting the PIN, which requires the recovery key to be entered */
+"RecoveryKeyFlow.resetPINInstruction" = "请输入恢复密钥以重置您的 PIN 码。";
+/* Assures the user that BRD will keep the user's funds secure. */
+"RecoveryKeyFlow.securityAssurance" = "鉴于在交易中您的资金可得到最佳的安全和隐私保障,您可放心购买和交易。";
+/* Recommends that the user stores the recovery key in a secure location */
+"RecoveryKeyFlow.storeSecurelyRecommendation" = "请将您的密钥存放在安全的地方。此密钥为恢复您的钱包的唯一方法。BRD 不会保留副本。";
+/* Title for the success page after the recovery key has been set up */
+"RecoveryKeyFlow.successHeading" = "恭喜！您已完成恢复密钥设置。";
+/* Subtitle for the success page after the recovery key has been set up */
+"RecoveryKeyFlow.successSubheading" = "您现已可以在您的 BRD 钱包中进行存款,交易以及购买加密货币。";
+/* Title displayed to the user on the intro screen when unlinking a wallet */
+"RecoveryKeyFlow.unlinkWallet" = "取消钱包与此设备的关联。";
+/* Subtitle displayed to the user on the intro screen when unlinking a wallet. */
+"RecoveryKeyFlow.unlinkWalletSubtext" = "要启用新钱包,请取消您的设备与当前设置的钱包间的关联。";
+/* Warning displayed when the user starts the process of unlinking a wallet */
+"RecoveryKeyFlow.unlinkWalletWarning" = "必须恢复钱包才能重新获得访问权限。";
+/* Title for recovery key intro page */
+"RecoveryKeyFlow.writeItDown" = "记下您的密钥";
+/* Title for the recovery key landing page if the key has already been generated. */
+"RecoveryKeyFlow.writeKeyAgain" = "再次记下您的恢复密钥";
+/* Subtitle for the write recovery key screen */
+"RecoveryKeyFlow.writeKeyScreenSubtitle" = "按顺序记下下列字词。";
+/* Title for the write recovery key screen */
+"RecoveryKeyFlow.writeKeyScreenTitle" = "您的恢复密钥";
+/* Title for the step number when the user pages through the recovery words */
+"RecoveryKeyFlow.writeKeyStepTitle" = "共 %2$@ 步,第 %1$@ 步";
 /* No amount entered error message. */
 "RequestAnAmount.noAmount" = "请先输入金额。";
 /* Request a specific amount of bitcoin */
@@ -496,6 +664,12 @@
 "ReScan.subheader1" = "估计时间";
 /* Subheader label */
 "ReScan.subheader2" = "何时同步？";
+/* Rewards view expanded body. */
+"RewardsView.expandedBody" = "了解如何节省交易费用并激活未来的奖励计划。";
+/* Rewards view expanded title. */
+"RewardsView.expandedTitle" = "介绍BRD奖励计划。";
+/* Rewards view title */
+"RewardsView.normalTitle" = "奖励";
 /* Scan bitcoin address camera flash toggle */
 "Scanner.flashButtonLabel" = "相机闪光灯";
 /* Complete filter label */
@@ -512,8 +686,11 @@
 "SecurityCenter.faceIdTitle" = "面部识别";
 /* Paper Key button description */
 "SecurityCenter.paperKeyDescription" = "若您丢失或升级您的手机，访问您的比特币的唯一方法。";
-/* Paper Key button title */
+/* Recovery Key button title. This used to be called 'paper key', so leaving the string key as `paperKeyTitle` in order
+ * to not break existing client code. */
 "SecurityCenter.paperKeyTitle" = "纸键";
+/* Paper Key button title */
+"SecurityCenter.paperKeyTitle.android" = "纸键";
 /* PIN button description */
 "SecurityCenter.pinDescription" = "保护您的 BRD 免遭未授权用户盗用。";
 /* PIN button title */
@@ -524,6 +701,18 @@
 "SecurityCenter.touchIdTitle" = "触摸 ID";
 /* Security center fingerprint authentication button */
 "SecurityCenter.touchIdTitle.android" = "指纹认证";
+/* Segwit enabled confirmation title */
+"Segwit.ConfirmationConfirmationTitle" = "您已启用 SegWit！";
+/* Segwit enabled confirmation description */
+"Segwit.ConfirmationInstructionsDescription" = "感谢您帮助比特币发展。";
+/* Segwit instructions */
+"Segwit.ConfirmationInstructionsInstructions" = "SegWit 支持还是一项不成熟的测试功能。\n启用 SegWit 后,将无法将其禁用。\n您可以在\"设置\"下找到传统地址。\n启用了 SegWit 的用户可能无法使用包括加密货币交易在内的部分第三方服务。如果出现紧急情况,您可以通过\"首选项\"(Preferences) >\"比特币设置\"(Bitcoin Settings) 生成一个传统地址。\n在将来的更新中,将自动为所有用户\n启用 SegWit。";
+/* Segwit extra confirmation title. */
+"Segwit.ConfirmChoiceLayout" = "启用 SegWit 是不可逆转的功能。是否确定要继续？";
+/* Segwit enableButton */
+"Segwit.Enable" = "启用";
+/* Segwit button label that takes the user back to the home screen once SegWit is enabled. */
+"Segwit.HomeButton" = "去月球";
 /* Send money amount label */
 "Send.amountLabel" = "金额";
 /* Balance: $4.00 */
@@ -586,6 +775,8 @@
 "Send.scanLabel" = "扫描";
 /* Send button label (the action, "press here to send") */
 "Send.sendLabel" = "发送";
+/* Send button label (for special case where the user specified send amount is too high and does not leave a balance to cover fees.) */
+"Send.sendMaximum" = "发送最高金额?";
 /* Send screen title (as in "this is the screen for sending money") */
 "Send.title" = "发送";
 /* Send money to label */
@@ -602,6 +793,10 @@
 "Settings.advanced" = "高级";
 /* Advanced Settings title */
 "Settings.advancedTitle" = "高级设置";
+/* ATM map menu item title explaining that it's a feature only available in the USA */
+"Settings.atmMapMenuItemSubtitle" = "仅在美国提供";
+/* ATM map menu item title */
+"Settings.atmMapMenuItemTitle" = "加密ATM地图";
 /* i.e. the currency which will be displayed */
 "Settings.currency" = "显示币种";
 /* e.g. "USD Settings" (settings for how USD is handled) */
@@ -610,6 +805,8 @@
 "Settings.currencySettings" = "货币设置";
 /* Join Early access label */
 "Settings.earlyAccess" = "加入早期访问";
+/* Enable segwit. */
+"Settings.EnableSegwit" = "启用 SegWit";
 /* Are you enjoying bread alert message body */
 "Settings.enjoying" = "您喜欢 BRD 吗？";
 /* Face ID spending limit label */
@@ -628,6 +825,8 @@
 "Settings.resetCurrencies" = "重置为默认货币";
 /* Leave review button label */
 "Settings.review" = "给我们评论";
+/* Rewards menu item */
+"Settings.rewards" = "奖励";
 /* Share anonymous data label */
 "Settings.shareData" = "分享匿名数据";
 /* Sync blockchain label */
@@ -638,6 +837,12 @@
 "Settings.touchIdLimit" = "触摸 ID 支出限制";
 /* The fingerprint spending limit */
 "Settings.touchIdLimit.android" = "指纹认证支出限额";
+/* View legacy address (old format). */
+"Settings.ViewLegacyAddress" = "查看传统接收地址";
+/* Receive Bitcoin instructions */
+"Settings.ViewLegacyAddressReceiveDescription" = "请仅发送比特币 (BTC) 至此地址。发送至此地址的任何其他资产将永久丢失。";
+/* Receive Bitcoin */
+"Settings.ViewLegacyAddressReceiveTitle" = "接收比特币";
 /* Wallet Settings section header */
 "Settings.wallet" = "钱包";
 /* Unlink/delete your wallet from the current device. */
@@ -652,16 +857,20 @@
 "StartPaperPhrase.againButtonTitle" = "再次书写纸键";
 /* Paper key explanation text. */
 "StartPaperPhrase.body" = "如果您的手机丢失、被盗、损坏或升级，纸上密钥是恢复 BRD 的唯一方法。\n\n\n我们将向您显示一张单词表，请将其写在纸上并保存在安全的地方。";
+/* Paper key explanation text (Android-version) */
+"StartPaperPhrase.Body.Android" = "在手机丢失,被盗,损坏或升级情况下,纸钥是您恢复 BRD 的唯一方法。\n\n您需要提供纸钥以更改手机安全设置。\n\n我们将向您展示一份单词列表,请您记录在纸上并妥善保管。";
 /* button label */
 "StartPaperPhrase.buttonTitle" = "写下纸键";
-/* Argument is date */
-"StartPaperPhrase.date" = "您最后一次记录纸上密钥是在 %1$@";
+/* Argument is date; date should be on a new line */
+"StartPaperPhrase.date" = "您最后一次记录纸上密钥是在 \n%1$@";
 /* button label */
 "StartViewController.createButton" = "创建新钱包";
 /* Start view message */
 "StartViewController.message" = "使用比特币最安全且最可靠的方式。";
 /* Recover your wallet from a backup */
 "StartViewController.recoverButton" = "恢复钱包";
+/* Syncing view done syncing state header text */
+"SyncingView.activity" = "活动";
 /* Syncing view connectiong state header text */
 "SyncingView.connecting" = "连接中";
 /* The sync has failed (to complete) */
@@ -786,6 +995,9 @@
 "TransactionDetails.commentsPlaceholder" = "添加备忘录...";
 /* Timestamp section header for complete tx */
 "TransactionDetails.completeTimestampHeader" = "完成";
+/* Block height and confirmations label
+eg. 182930 (45061 confirmations) */
+"TransactionDetails.confirmationsLabel" = "确认";
 /* Empty transaction list message. */
 "TransactionDetails.emptyMessage" = "您的交易将显示在这里。";
 /* e.g. the users balance after the transaction was compeleted */

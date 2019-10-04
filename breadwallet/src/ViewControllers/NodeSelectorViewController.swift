@@ -9,7 +9,7 @@
 import UIKit
 import BRCore
 
-class NodeSelectorViewController : UIViewController, Trackable {
+class NodeSelectorViewController: UIViewController, Trackable {
 
     private let titleLabel = UILabel(font: .customBold(size: 22.0), color: .white)
     private let nodeLabel = UILabel(font: .customBody(size: 14.0), color: .white)
@@ -99,7 +99,7 @@ class NodeSelectorViewController : UIViewController, Trackable {
     private func switchToManual() {
         let alert = UIAlertController(title: S.NodeSelector.enterTitle, message: S.NodeSelector.enterBody, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: S.Button.cancel, style: .cancel, handler: nil))
-        let okAction = UIAlertAction(title: S.Button.ok, style: .default, handler: { [weak self] action in
+        let okAction = UIAlertAction(title: S.Button.ok, style: .default, handler: { [weak self] _ in
             guard let myself = self else { return }
             guard let ip = alert.textFields?.first, let port = alert.textFields?.last else { return }
             if let addressText = ip.text?.replacingOccurrences(of: myself.decimalSeparator, with: ".") {
@@ -119,16 +119,20 @@ class NodeSelectorViewController : UIViewController, Trackable {
         self.okAction = okAction
         self.okAction?.isEnabled = false
         alert.addAction(okAction)
-        alert.addTextField { textField in
+        alert.addTextField { [unowned self] textField in
             textField.placeholder = "192.168.0.1"
-            textField.keyboardType = .decimalPad
+            textField.keyboardType = self.keyboardType
             textField.addTarget(self, action: #selector(self.ipAddressDidChange(textField:)), for: .editingChanged)
         }
-        alert.addTextField { textField in
+        alert.addTextField { [unowned self] textField in
             textField.placeholder = "8333"
-            textField.keyboardType = .decimalPad
+            textField.keyboardType = self.keyboardType
         }
         present(alert, animated: true, completion: nil)
+    }
+    
+    private var keyboardType: UIKeyboardType {
+        return decimalSeparator == "." ? .decimalPad : .numbersAndPunctuation
     }
 
     private func setCustomNodeText() {

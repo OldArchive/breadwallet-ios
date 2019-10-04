@@ -8,7 +8,7 @@
 
 import Foundation
 
-class KVStoreCoordinator : Subscriber {
+class KVStoreCoordinator: Subscriber {
 
     init(kvStore: BRReplicatedKVStore) {
         self.kvStore = kvStore
@@ -21,7 +21,7 @@ class KVStoreCoordinator : Subscriber {
             let newCurrencyListMetaData = CurrencyListMetaData()
             newCurrencyListMetaData.enabledCurrencies = CurrencyListMetaData.defaultCurrencies
             set(newCurrencyListMetaData)
-            setInitialDisplayWallets(metaData: newCurrencyListMetaData, tokens: [])
+            setInitialDisplayWallets(metaData: newCurrencyListMetaData)
             return
         }
 
@@ -32,12 +32,12 @@ class KVStoreCoordinator : Subscriber {
         }
 
         assert(Store.state.availableTokens.count > 1, "missing token list")
-        if currencyMetaData.enabledCurrencies.count == 0 {
+        if currencyMetaData.enabledCurrencies.isEmpty {
             print("no wallets enabled in metadata, reverting to default")
             currencyMetaData.enabledCurrencies = CurrencyListMetaData.defaultCurrencies
             set(currencyMetaData)
         }
-        self.setInitialDisplayWallets(metaData: currencyMetaData, tokens: Store.state.availableTokens)
+        self.setInitialDisplayWallets(metaData: currencyMetaData)
 
         Store.subscribe(self, name: .resetDisplayCurrencies, callback: { _ in
             self.resetDisplayCurrencies()
@@ -52,13 +52,14 @@ class KVStoreCoordinator : Subscriber {
         currencyMetaData.hiddenCurrencies = []
         set(currencyMetaData)
         try? kvStore.syncKey(tokenListMetaDataKey, completionHandler: {_ in })
-        setInitialDisplayWallets(metaData: currencyMetaData, tokens: [])
+        setInitialDisplayWallets(metaData: currencyMetaData)
     }
 
-    private func setInitialDisplayWallets(metaData: CurrencyListMetaData, tokens: [ERC20Token]) {
+    private func setInitialDisplayWallets(metaData: CurrencyListMetaData) {
         //skip this setup if stored wallets are the same as wallets in the state
         guard walletsHaveChanged(displayCurrencies: Store.state.displayCurrencies, enabledCurrencies: metaData.enabledCurrencies) else { return }
 
+        let availableTokens = Store.state.availableTokens
         let oldWallets = Store.state.wallets
         var newWallets = [String: WalletState]()
         var displayOrder = 0
@@ -67,22 +68,22 @@ class KVStoreCoordinator : Subscriber {
         metaData.enabledCurrencies.forEach {
             if let walletState = oldWallets[$0] {
                 newWallets[$0] = walletState.mutate(displayOrder: displayOrder)
-                displayOrder = displayOrder + 1
+                displayOrder += 1
             } else {
                 //Since a WalletState wasn't found, it must be a token address
                 let tokenAddress = $0.replacingOccurrences(of: C.erc20Prefix, with: "")
                 if tokenAddress.lowercased() == Currencies.brd.address.lowercased() {
                     newWallets[Currencies.brd.code] = oldWallets[Currencies.brd.code]!.mutate(displayOrder: displayOrder)
-                    displayOrder = displayOrder + 1
+                    displayOrder += 1
                 } else {
-                    let filteredTokens = tokens.filter { $0.address.lowercased() == tokenAddress.lowercased() }
+                    let filteredTokens = availableTokens.filter { $0.address.lowercased() == tokenAddress.lowercased() }
                     if let token = filteredTokens.first {
                         if let oldWallet = oldWallets[token.code] {
                             newWallets[token.code] = oldWallet.mutate(displayOrder: displayOrder)
                         } else {
                             newWallets[token.code] = WalletState.initial(token, displayOrder: displayOrder)
                         }
-                        displayOrder = displayOrder + 1
+                        displayOrder += 1
                     } else {
                         unknownTokensToRemove.append($0)
                         print("unknown token \(tokenAddress) in metadata will be removed")
@@ -92,7 +93,7 @@ class KVStoreCoordinator : Subscriber {
         }
         
         //Remove any unknown tokens
-        if unknownTokensToRemove.count > 0 {
+        if !unknownTokensToRemove.isEmpty {
             metaData.enabledCurrencies = metaData.enabledCurrencies.filter { !unknownTokensToRemove.contains($0) }
             set(metaData)
             try? kvStore.syncKey(tokenListMetaDataKey, completionHandler: {_ in })
@@ -112,10 +113,10 @@ class KVStoreCoordinator : Subscriber {
                 }
             }
         }
-        Store.perform(action: ManageWallets.setWallets(newWallets))
+        Store.perform(action: ManageWallets.SetWallets(newWallets))
     }
 
-    private func walletsHaveChanged(displayCurrencies: [CurrencyDef], enabledCurrencies: [String]) -> Bool {
+    private func walletsHaveChanged(displayCurrencies: [Currency], enabledCurrencies: [String]) -> Bool {
         let identifiers: [String] = displayCurrencies.map {
             if let token = $0 as? ERC20Token {
                 return C.erc20Prefix + token.address
@@ -154,7 +155,7 @@ class KVStoreCoordinator : Subscriber {
 
     private func set(_ info: BRKVStoreObject) {
         do {
-            let _ = try kvStore.set(info)
+            _ = try kvStore.set(info)
         } catch let error {
             print("error setting wallet info: \(error)")
         }

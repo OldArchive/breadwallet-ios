@@ -16,89 +16,101 @@ enum PhraseEntryReason {
 
 typealias EnterPhraseCallback = (String) -> Void
 
-class EnterPhraseViewController : UIViewController, UIScrollViewDelegate, Trackable {
+class EnterPhraseViewController: UIViewController, UIScrollViewDelegate, Trackable {
 
-    init(walletManager: BTCWalletManager, reason: PhraseEntryReason) {
-        self.walletManager = walletManager
-        self.enterPhrase = EnterPhraseCollectionViewController(walletManager: walletManager)
+    init(keyMaster: KeyMaster, reason: PhraseEntryReason) {
+        self.keyMaster = keyMaster
+        self.enterPhrase = EnterPhraseCollectionViewController(keyMaster: keyMaster)
         self.faq = UIButton.buildFaqButton(articleId: ArticleIds.recoverWallet)
         self.reason = reason
         super.init(nibName: nil, bundle: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notification:)), name: .UIKeyboardWillShow, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: .UIKeyboardWillHide, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notification:)), name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: UIResponder.keyboardWillHideNotification, object: nil)
     }
 
-    //MARK: - Private
-    private let walletManager: BTCWalletManager
+    // MARK: - Private
+    private let keyMaster: KeyMaster
     private let reason: PhraseEntryReason
     private let enterPhrase: EnterPhraseCollectionViewController
-    private let errorLabel = UILabel.wrapping(font: .customBody(size: 16.0), color: .cameraGuideNegative)
-    private let instruction = UILabel(font: .customBold(size: 14.0), color: .white)
-    private let subheader = UILabel.wrapping(font: .customBody(size: 16.0), color: .white)
+    private let errorLabel = UILabel.wrapping(font: Theme.caption, color: Theme.error)
+    private let heading = UILabel.wrapping(font: Theme.h2Title, color: Theme.primaryText)
+    private let subheading = UILabel.wrapping(font: Theme.body1, color: Theme.secondaryText)
     private let faq: UIButton
     private let scrollView = UIScrollView()
     private let container = UIView()
-    private let moreInfoButton = UIButton(type: .system)
 
+    private let headingLeftRightMargins: CGFloat = E.isSmallScreen ? 24 : 54
+    
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
 
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+    
     override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        navigationItem.rightBarButtonItem = UIBarButtonItem(customView: faq)
+        
+        setUpHeadings()
         addSubviews()
         addConstraints()
         setInitialData()
     }
-
+    
+    private func setUpHeadings() {
+        [heading, subheading].forEach({
+            $0.textAlignment = .center
+        })
+    }
+    
     private func addSubviews() {
         view.addSubview(scrollView)
         scrollView.addSubview(container)
-        container.addSubview(subheader)
+        container.addSubview(heading)
+        container.addSubview(subheading)
         container.addSubview(errorLabel)
-        container.addSubview(instruction)
-        container.addSubview(faq)
-        container.addSubview(moreInfoButton)
 
-        addChildViewController(enterPhrase)
+        addChild(enterPhrase)
         container.addSubview(enterPhrase.view)
-        enterPhrase.didMove(toParentViewController: self)
+        enterPhrase.didMove(toParent: self)
     }
 
     private func addConstraints() {
-        scrollView.constrain(toSuperviewEdges: nil)
         scrollView.constrain([
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor) ])
         container.constrain(toSuperviewEdges: nil)
         container.constrain([
             container.widthAnchor.constraint(equalTo: view.widthAnchor) ])
-        subheader.constrain([
-            subheader.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: C.padding[2]),
-            subheader.topAnchor.constraint(equalTo: container.topAnchor),
-            subheader.trailingAnchor.constraint(equalTo: faq.leadingAnchor, constant: -C.padding[2])])
-        instruction.constrain([
-            instruction.topAnchor.constraint(equalTo: subheader.bottomAnchor, constant: C.padding[3]),
-            instruction.leadingAnchor.constraint(equalTo: subheader.leadingAnchor, constant: C.padding[2])])
+        heading.constrain([
+            heading.topAnchor.constraint(equalTo: container.topAnchor, constant: C.padding[3]),
+            heading.leftAnchor.constraint(equalTo: container.leftAnchor, constant: headingLeftRightMargins),
+            heading.rightAnchor.constraint(equalTo: container.rightAnchor, constant: -headingLeftRightMargins)
+            ])
+        subheading.constrain([
+            subheading.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: C.padding[2]),
+            subheading.leftAnchor.constraint(equalTo: container.leftAnchor, constant: headingLeftRightMargins),
+            subheading.rightAnchor.constraint(equalTo: container.rightAnchor, constant: -headingLeftRightMargins)
+            ])
+        
+        let enterPhraseMargin: CGFloat = E.isSmallScreen ? (C.padding[2] * 0.75) : C.padding[2]
+        
         enterPhrase.view.constrain([
-            enterPhrase.view.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: C.padding[2]),
-            enterPhrase.view.topAnchor.constraint(equalTo: instruction.bottomAnchor, constant: C.padding[1]),
-            enterPhrase.view.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -C.padding[2]),
+            enterPhrase.view.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: enterPhraseMargin),
+            enterPhrase.view.topAnchor.constraint(equalTo: subheading.bottomAnchor, constant: C.padding[4]),
+            enterPhrase.view.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -enterPhraseMargin),
             enterPhrase.view.heightAnchor.constraint(equalToConstant: enterPhrase.height) ])
         errorLabel.constrain([
             errorLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: C.padding[2]),
-            errorLabel.topAnchor.constraint(equalTo: enterPhrase.view.bottomAnchor, constant: C.padding[1]),
-            errorLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -C.padding[2]),
-            errorLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -C.padding[2] )])
-        faq.constrain([
-            faq.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -C.padding[2]),
-            faq.centerYAnchor.constraint(equalTo: container.topAnchor, constant: C.padding[2]),
-            faq.widthAnchor.constraint(equalToConstant: 44.0),
-            faq.heightAnchor.constraint(equalToConstant: 44.0) ])
-        moreInfoButton.constrain([
-            moreInfoButton.topAnchor.constraint(equalTo: subheader.bottomAnchor, constant: C.padding[2]),
-            moreInfoButton.leadingAnchor.constraint(equalTo: subheader.leadingAnchor) ])
+            errorLabel.topAnchor.constraint(equalTo: enterPhrase.view.bottomAnchor, constant: 12),
+            errorLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -C.padding[4]),
+            errorLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -C.padding[2] )
+            ])
     }
 
     private func setInitialData() {
@@ -109,35 +121,32 @@ class EnterPhraseViewController : UIViewController, UIScrollViewDelegate, Tracka
         enterPhrase.didFinishPhraseEntry = { [weak self] phrase in
             self?.validatePhrase(phrase)
         }
-        instruction.text = S.RecoverWallet.instruction
-        faq.tintColor = .white
+
         switch reason {
-        case .setSeed(_):
+        case .setSeed:
             saveEvent("enterPhrase.setSeed")
-            title = S.RecoverWallet.header
-            subheader.text = S.RecoverWallet.subheader
-            moreInfoButton.isHidden = true
-        case .validateForResettingPin(_):
+            heading.text = S.RecoverKeyFlow.recoverYourWallet
+            subheading.text = S.RecoverKeyFlow.recoverYourWalletSubtitle
+        case .validateForResettingPin:
             saveEvent("enterPhrase.resettingPin")
-            title = S.RecoverWallet.headerResetPin
-            subheader.text = S.RecoverWallet.subheaderResetPin
-            instruction.isHidden = true
-            moreInfoButton.setTitle(S.RecoverWallet.resetPinInfo, for: .normal)
-            moreInfoButton.tap = {
+            heading.text = S.RecoverKeyFlow.enterRecoveryKey
+            subheading.text = S.RecoverKeyFlow.resetPINInstruction
+            faq.tap = {
                 Store.trigger(name: .presentFaq(ArticleIds.resetPinWithPaperKey, nil))
             }
-            faq.isHidden = true
-        case .validateForWipingWallet(_):
+            navigationItem.rightBarButtonItem = UIBarButtonItem(customView: faq)
+            faq.tintColor = Theme.primaryText
+        case .validateForWipingWallet:
             saveEvent("enterPhrase.wipeWallet")
-            title = S.WipeWallet.title
-            subheader.text = S.WipeWallet.instruction
+            heading.text = S.RecoverKeyFlow.enterRecoveryKey
+            subheading.text = S.RecoverKeyFlow.enterRecoveryKeySubtitle
         }
 
         scrollView.delegate = self
     }
 
     private func validatePhrase(_ phrase: String) {
-        guard walletManager.isPhraseValid(phrase) else {
+        guard keyMaster.isSeedPhraseValid(phrase) else {
             saveEvent("enterPhrase.invalid")
             errorLabel.isHidden = false
             return
@@ -147,25 +156,25 @@ class EnterPhraseViewController : UIViewController, UIScrollViewDelegate, Tracka
 
         switch reason {
         case .setSeed(let callback):
-            guard self.walletManager.setSeedPhrase(phrase) else { errorLabel.isHidden = false; return }
+            guard self.keyMaster.setSeedPhrase(phrase) else { errorLabel.isHidden = false; return }
             //Since we know that the user had their phrase at this point,
             //this counts as a write date
             UserDefaults.writePaperPhraseDate = Date()
             Store.perform(action: LoginSuccess())
             return callback(phrase)
         case .validateForResettingPin(let callback):
-            guard self.walletManager.authenticate(phrase: phrase) else { errorLabel.isHidden = false; return }
+            guard self.keyMaster.authenticate(withPhrase: phrase) else { errorLabel.isHidden = false; return }
             UserDefaults.writePaperPhraseDate = Date()
             return callback(phrase)
         case .validateForWipingWallet(let callback):
-            guard self.walletManager.authenticate(phrase: phrase) else { errorLabel.isHidden = false; return }
+            guard self.keyMaster.authenticate(withPhrase: phrase) else { errorLabel.isHidden = false; return }
             return callback()
         }
     }
 
     @objc private func keyboardWillShow(notification: Notification) {
         guard let userInfo = notification.userInfo else { return }
-        guard let frameValue = userInfo[UIKeyboardFrameEndUserInfoKey] as? NSValue else { return }
+        guard let frameValue = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue else { return }
         var contentInset = scrollView.contentInset
         if contentInset.bottom == 0.0 {
             contentInset.bottom = frameValue.cgRectValue.height + 44.0
@@ -179,10 +188,6 @@ class EnterPhraseViewController : UIViewController, UIScrollViewDelegate, Tracka
             contentInset.bottom = 0.0
         }
         scrollView.contentInset = contentInset
-    }
-
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .lightContent
     }
 
     required init?(coder aDecoder: NSCoder) {

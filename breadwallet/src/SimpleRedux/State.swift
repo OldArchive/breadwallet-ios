@@ -11,6 +11,7 @@ import BRCore
 
 struct State {
     let isStartFlowVisible: Bool
+    let isOnboardingEnabled: Bool
     let isLoginRequired: Bool
     let rootModal: RootModal
     let isBtcSwapped: Bool //move to CurrencyState
@@ -23,8 +24,9 @@ struct State {
     let walletID: String?
     let wallets: [String: WalletState]
     let availableTokens: [ERC20Token]
+    var experiments: [Experiment]?
     
-    subscript(currency: CurrencyDef) -> WalletState? {
+    subscript(currency: Currency) -> WalletState? {
         guard let walletState = wallets[currency.code] else {
             return nil
         }
@@ -35,26 +37,39 @@ struct State {
         return wallets.values.sorted(by: { $0.displayOrder < $1.displayOrder })
     }
     
-    var currencies: [CurrencyDef] {
+    var currencies: [Currency] {
         return orderedWallets.map { $0.currency }
     }
-    
-    var primaryWallet: WalletState {
-        return wallets[Currencies.btc.code]!
-    }
 
-    var displayCurrencies: [CurrencyDef] {
+    var displayCurrencies: [Currency] {
         return orderedWallets.filter { $0.displayOrder >= 0 }.map { $0.currency }
     }
     
     var supportedTokens: [ERC20Token] {
         return availableTokens.filter { $0.isSupported }
     }
+    
+    var shouldShowOnboarding: Bool {
+        return isOnboardingEnabled && KeyStore.staticNoWallet
+    }
+    
+    var shouldShowBuyNotificationForDefaultCurrency: Bool {
+        switch defaultCurrencyCode {
+        // Currencies eligible for Coinify.
+        case C.euroCurrencyCode,
+             C.britishPoundCurrencyCode,
+             C.danishKroneCurrencyCode:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 extension State {
     static var initial: State {
         return State(   isStartFlowVisible: false,
+                        isOnboardingEnabled: true,
                         isLoginRequired: true,
                         rootModal: .none,
                         isBtcSwapped: UserDefaults.isBtcSwapped,
@@ -69,11 +84,13 @@ extension State {
                                   Currencies.bch.code: WalletState.initial(Currencies.bch, displayOrder: -1),
                                   Currencies.eth.code: WalletState.initial(Currencies.eth, displayOrder: -1),
                                   Currencies.brd.code: WalletState.initial(Currencies.brd, displayOrder: -1)],
-                        availableTokens: [Currencies.brd]
+                        availableTokens: [Currencies.brd],
+                        experiments: nil
         )
     }
     
     func mutate(   isStartFlowVisible: Bool? = nil,
+                   isOnboardingEnabled: Bool? = nil,
                    isLoginRequired: Bool? = nil,
                    rootModal: RootModal? = nil,
                    isBtcSwapped: Bool? = nil,
@@ -85,8 +102,10 @@ extension State {
                    pinLength: Int? = nil,
                    walletID: String? = nil,
                    wallets: [String: WalletState]? = nil,
-                   availableTokens: [ERC20Token]? = nil) -> State {
+                   availableTokens: [ERC20Token]? = nil,
+                   experiments: [Experiment]? = nil) -> State {
         return State(isStartFlowVisible: isStartFlowVisible ?? self.isStartFlowVisible,
+                     isOnboardingEnabled: isOnboardingEnabled ?? self.isOnboardingEnabled,
                      isLoginRequired: isLoginRequired ?? self.isLoginRequired,
                      rootModal: rootModal ?? self.rootModal,
                      isBtcSwapped: isBtcSwapped ?? self.isBtcSwapped,
@@ -98,7 +117,9 @@ extension State {
                      pinLength: pinLength ?? self.pinLength,
                      walletID: walletID ?? self.walletID,
                      wallets: wallets ?? self.wallets,
-                     availableTokens: availableTokens ?? self.availableTokens)
+                     availableTokens: availableTokens ?? self.availableTokens,
+                     experiments: experiments ?? self.experiments
+        )
     }
     
     func mutate(walletState: WalletState) -> State {
@@ -108,18 +129,29 @@ extension State {
     }
 }
 
+// MARK: - Experiments
+
+extension State {
+    
+    public func experimentWithName(_ experimentName: ExperimentName) -> Experiment? {
+        guard let set = experiments, let exp = set.first(where: { $0.name == experimentName.rawValue }) else { return nil }
+        return exp
+    }
+    
+}
+
 // MARK: -
 
 enum RootModal {
     case none
-    case send(currency: CurrencyDef)
+    case send(currency: Currency)
     case sendForRequest(request: PigeonRequest)
-    case receive(currency: CurrencyDef)
+    case receive(currency: Currency)
     case loginAddress
     case loginScan
-    case requestAmount(currency: CurrencyDef)
-    case buy(currency: CurrencyDef?)
-    case sell(currency: CurrencyDef?)
+    case requestAmount(currency: Currency, address: String)
+    case buy(currency: Currency?)
+    case sell(currency: Currency?)
     case trade
     case receiveLegacy
 }
@@ -133,7 +165,7 @@ enum SyncState {
 // MARK: -
 
 struct WalletState {
-    let currency: CurrencyDef
+    let currency: Currency
     let displayOrder: Int // -1 for hidden
     let syncProgress: Double
     let syncState: SyncState
@@ -150,9 +182,9 @@ struct WalletState {
     let fees: Fees?
     let maxDigits: Int // this is bits vs bitcoin setting
     let connectionStatus: BRPeerStatus
-    
-    
-    static func initial(_ currency: CurrencyDef, displayOrder: Int) -> WalletState {
+    let priceChange: PriceChange?
+
+    static func initial(_ currency: Currency, displayOrder: Int) -> WalletState {
         return WalletState(currency: currency,
                            displayOrder: displayOrder,
                            syncProgress: 0.0,
@@ -169,7 +201,8 @@ struct WalletState {
                            currentRate: UserDefaults.currentRate(forCode: currency.code),
                            fees: nil,
                            maxDigits: (currency is Bitcoin) ? UserDefaults.maxDigits : currency.commonUnit.decimals,
-                           connectionStatus: BRPeerStatusDisconnected)
+                           connectionStatus: BRPeerStatusDisconnected,
+                           priceChange: nil)
     }
 
     func mutate(    displayOrder: Int? = nil,
@@ -187,7 +220,8 @@ struct WalletState {
                     rates: [Rate]? = nil,
                     fees: Fees? = nil,
                     maxDigits: Int? = nil,
-                    connectionStatus: BRPeerStatus? = nil) -> WalletState {
+                    connectionStatus: BRPeerStatus? = nil,
+                    priceChange: PriceChange? = nil) -> WalletState {
 
         return WalletState(currency: self.currency,
                            displayOrder: displayOrder ?? self.displayOrder,
@@ -205,13 +239,14 @@ struct WalletState {
                            currentRate: currentRate ?? self.currentRate,
                            fees: fees ?? self.fees,
                            maxDigits: maxDigits ?? self.maxDigits,
-                           connectionStatus: connectionStatus ?? self.connectionStatus)
+                           connectionStatus: connectionStatus ?? self.connectionStatus,
+                           priceChange: priceChange ?? self.priceChange)
     }
 }
 
-extension WalletState : Equatable {}
+extension WalletState: Equatable {}
 
-func ==(lhs: WalletState, rhs: WalletState) -> Bool {
+func == (lhs: WalletState, rhs: WalletState) -> Bool {
     return lhs.currency.code == rhs.currency.code &&
         lhs.syncProgress == rhs.syncProgress &&
         lhs.syncState == rhs.syncState &&
@@ -228,9 +263,9 @@ func ==(lhs: WalletState, rhs: WalletState) -> Bool {
         lhs.legacyReceiveAddress == rhs.legacyReceiveAddress
 }
 
-extension RootModal : Equatable {}
+extension RootModal: Equatable {}
 
-func ==(lhs: RootModal, rhs: RootModal) -> Bool {
+func == (lhs: RootModal, rhs: RootModal) -> Bool {
     switch(lhs, rhs) {
     case (.none, .none):
         return true
@@ -244,8 +279,8 @@ func ==(lhs: RootModal, rhs: RootModal) -> Bool {
         return true
     case (.loginScan, .loginScan):
         return true
-    case (.requestAmount(let lhsCurrency), .requestAmount(let rhsCurrency)):
-        return lhsCurrency.code == rhsCurrency.code
+    case (.requestAmount(let lhsCurrency, let lhsAddress), .requestAmount(let rhsCurrency, let rhsAddress)):
+        return lhsCurrency.code == rhsCurrency.code && lhsAddress == rhsAddress
     case (.buy(let lhsCurrency?), .buy(let rhsCurrency?)):
         return lhsCurrency.code == rhsCurrency.code
     case (.buy(nil), .buy(nil)):
@@ -263,8 +298,7 @@ func ==(lhs: RootModal, rhs: RootModal) -> Bool {
     }
 }
 
-
-extension CurrencyDef {
+extension Currency {
     var state: WalletState? {
         return Store.state[self]
     }

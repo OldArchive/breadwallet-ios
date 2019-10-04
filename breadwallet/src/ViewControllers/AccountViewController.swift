@@ -10,17 +10,17 @@ import UIKit
 import BRCore
 import MachO
 
-
-class AccountViewController : UIViewController, Subscriber {
-
-    //MARK: - Public
-    let currency: CurrencyDef
+class AccountViewController: UIViewController, Subscriber, Trackable {
     
-    init(currency: CurrencyDef, walletManager: WalletManager) {
+    // MARK: - Public
+    let currency: Currency
+    
+    init(currency: Currency, walletManager: WalletManager) {
         self.walletManager = walletManager
         self.currency = currency
         self.headerView = AccountHeaderView(currency: currency)
         self.footerView = AccountFooterView(currency: currency)
+        self.searchHeaderview = SearchHeaderView()
         super.init(nibName: nil, bundle: nil)
         self.transactionsTableView = TransactionsTableViewController(currency: currency, walletManager: walletManager, didSelectTransaction: didSelectTransaction)
 
@@ -36,18 +36,14 @@ class AccountViewController : UIViewController, Subscriber {
         footerView.sellCallback = { Store.perform(action: RootModalActions.Present(modal: .sell(currency: self.currency))) }
     }
 
-    //MARK: - Private
+    // MARK: - Private
     private let walletManager: WalletManager
     private let headerView: AccountHeaderView
     private let footerView: AccountFooterView
     private var footerHeightConstraint: NSLayoutConstraint?
     private let transitionDelegate = ModalTransitionDelegate(type: .transactionDetail)
     private var transactionsTableView: TransactionsTableViewController!
-    private let searchHeaderview: SearchHeaderView = {
-        let view = SearchHeaderView()
-        view.isHidden = true
-        return view
-    }()
+    private let searchHeaderview: SearchHeaderView
     private let headerContainer = UIView()
     private var loadingTimer: Timer?
     private var shouldShowStatusBar: Bool = true {
@@ -59,7 +55,29 @@ class AccountViewController : UIViewController, Subscriber {
             }
         }
     }
-
+    private var notificationObservers = [String: NSObjectProtocol]()
+    private var tableViewTopConstraint: NSLayoutConstraint?
+    private var headerContainerSearchHeight: NSLayoutConstraint?
+    private var rewardsViewHeightConstraint: NSLayoutConstraint?
+    private var rewardsView: RewardsView?
+    private let rewardsAnimationDuration: TimeInterval = 0.5
+    private let rewardsShrinkTimerDuration: TimeInterval = 6.0
+    private var rewardsTappedEvent: String {
+        return makeEventName([EventContext.rewards.name, Event.banner.name])
+    }
+    
+    private func tableViewTopConstraintConstant(for rewardsViewState: RewardsView.State) -> CGFloat {
+        return rewardsViewState == .expanded ? RewardsView.expandedSize : (RewardsView.normalSize)
+    }
+    
+    private var shouldShowRewardsView: Bool {
+        return Currencies.brd.code == currency.code
+    }
+    
+    private var shouldAnimateRewardsView: Bool {
+        return shouldShowRewardsView && UserDefaults.shouldShowBRDRewardsAnimation
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // detect jailbreak so we can throw up an idiot warning, in viewDidLoad so it can't easily be swizzled out
@@ -73,18 +91,29 @@ class AccountViewController : UIViewController, Subscriber {
                     isJailbroken = true
                 }
             }
-            NotificationCenter.default.addObserver(forName: .UIApplicationWillEnterForeground, object: nil, queue: nil) { note in
+            notificationObservers[UIApplication.willEnterForegroundNotification.rawValue] =
+                NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil) { _ in
                 self.showJailbreakWarnings(isJailbroken: isJailbroken)
             }
             showJailbreakWarnings(isJailbroken: isJailbroken)
         }
-
+        
         setupNavigationBar()
         addSubviews()
         addConstraints()
         addTransactionsView()
         addSubscriptions()
         setInitialData()
+        
+        if shouldShowRewardsView {
+            addRewardsView()
+        }
+        transactionsTableView.didScrollToYOffset = { offset in
+            self.headerView.setOffset(offset)
+        }
+        transactionsTableView.didStopScrolling = {
+            self.headerView.didStopScrolling()
+        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -94,12 +123,18 @@ class AccountViewController : UIViewController, Subscriber {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        headerView.setBalances()
+        
         if walletManager.peerManager?.connectionStatus == BRPeerStatusDisconnected {
             DispatchQueue.walletQueue.async { [weak self] in
                 self?.walletManager.peerManager?.connect()
             }
         }
+        
+        if shouldAnimateRewardsView {
+            expandRewardsView()
+        }
+        
+        saveEvent(makeEventName([EventContext.wallet.name, currency.code, Event.appeared.name]))
     }
     
     @available(iOS 11.0, *)
@@ -112,7 +147,6 @@ class AccountViewController : UIViewController, Subscriber {
     private func setupNavigationBar() {
         let searchButton = UIButton(type: .system)
         searchButton.setImage(#imageLiteral(resourceName: "SearchIcon"), for: .normal)
-        searchButton.frame = CGRect(x: 0.0, y: 12.0, width: 22.0, height: 22.0) // for iOS 10
         searchButton.widthAnchor.constraint(equalToConstant: 22.0).isActive = true
         searchButton.heightAnchor.constraint(equalToConstant: 22.0).isActive = true
         searchButton.tintColor = .white
@@ -136,21 +170,14 @@ class AccountViewController : UIViewController, Subscriber {
             headerContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor)])
         headerView.constrain(toSuperviewEdges: nil)
         searchHeaderview.constrain(toSuperviewEdges: nil)
-
+        headerContainerSearchHeight = headerContainer.heightAnchor.constraint(equalToConstant: AccountHeaderView.headerViewMinHeight)
+        
         footerHeightConstraint = footerView.heightAnchor.constraint(equalToConstant: AccountFooterView.height)
-        if #available(iOS 11.0, *) {
-            footerView.constrain([
-                footerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-                footerView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: -C.padding[1]),
-                footerView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: C.padding[1]),
-                footerHeightConstraint ])
-        } else {
-            footerView.constrain([
-                footerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-                footerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: -C.padding[1]),
-                footerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: C.padding[1]),
-                footerHeightConstraint ])
-        }
+        footerView.constrain([
+            footerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            footerView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: -C.padding[1]),
+            footerView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: C.padding[1]),
+            footerHeightConstraint ])
     }
 
     private func addSubscriptions() {
@@ -163,32 +190,33 @@ class AccountViewController : UIViewController, Subscriber {
     }
 
     private func setInitialData() {
+        searchHeaderview.isHidden = true
         searchHeaderview.didCancel = hideSearchHeaderView
         searchHeaderview.didChangeFilters = { [weak self] filters in
             self?.transactionsTableView.filters = filters
         }
+        headerView.setHostContentOffset = { offset in
+            self.transactionsTableView.tableView.contentOffset.y = offset
+        }
     }
     
     private func addTransactionsView() {
-        view.backgroundColor = .whiteTint
+        // Store this constraint so it can be easily updated later when showing/hiding the rewards view.
+        tableViewTopConstraint = transactionsTableView.view.topAnchor.constraint(equalTo: headerView.bottomAnchor)
+        
+        transactionsTableView.view.backgroundColor = .clear
+        view.backgroundColor = .white
         addChildViewController(transactionsTableView, layout: {
-            if #available(iOS 11.0, *) {
-                transactionsTableView.view.constrain([
-                    transactionsTableView.view.topAnchor.constraint(equalTo: headerContainer.bottomAnchor),
-                    transactionsTableView.view.bottomAnchor.constraint(equalTo: footerView.topAnchor),
-                    transactionsTableView.view.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-                    transactionsTableView.view.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor)])
-            } else {
-                transactionsTableView.view.constrain([
-                    transactionsTableView.view.topAnchor.constraint(equalTo: headerContainer.bottomAnchor),
-                    transactionsTableView.view.bottomAnchor.constraint(equalTo: footerView.topAnchor),
-                    transactionsTableView.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-                    transactionsTableView.view.trailingAnchor.constraint(equalTo: view.trailingAnchor)])
-            }
+            transactionsTableView.view.constrain([
+                tableViewTopConstraint,
+                transactionsTableView.view.bottomAnchor.constraint(equalTo: footerView.topAnchor),
+                transactionsTableView.view.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+                transactionsTableView.view.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor)])
         })
+        view.sendSubviewToBack(transactionsTableView.view)
     }
     
-    private func didSelectTransaction(transactions: [Transaction], selectedIndex: Int) -> Void {
+    private func didSelectTransaction(transactions: [Transaction], selectedIndex: Int) {
         let transactionDetails = TxDetailViewController(transaction: transactions[selectedIndex])
         transactionDetails.modalPresentationStyle = .overCurrentContext
         transactionDetails.transitioningDelegate = transitionDelegate
@@ -213,14 +241,13 @@ class AccountViewController : UIViewController, Subscriber {
     }
     
     private func showSearchHeaderView() {
-        let navBarHeight: CGFloat = 44.0
         self.navigationController?.setNavigationBarHidden(true, animated: false)
-        var contentInset = self.transactionsTableView.tableView.contentInset
-        var contentOffset = self.transactionsTableView.tableView.contentOffset
-        contentInset.top += navBarHeight
-        contentOffset.y -= navBarHeight
-        self.transactionsTableView.tableView.contentInset = contentInset
-        self.transactionsTableView.tableView.contentOffset = contentOffset
+        headerView.stopHeightConstraint()
+        headerContainerSearchHeight?.isActive = true
+        UIView.animate(withDuration: C.animationDuration, animations: {
+            self.view.layoutIfNeeded()
+        })
+        
         UIView.transition(from: self.headerView,
                           to: self.searchHeaderview,
                           duration: C.animationDuration,
@@ -232,11 +259,13 @@ class AccountViewController : UIViewController, Subscriber {
     }
     
     private func hideSearchHeaderView() {
-        let navBarHeight: CGFloat = 44.0
         self.navigationController?.setNavigationBarHidden(false, animated: false)
-        var contentInset = self.transactionsTableView.tableView.contentInset
-        contentInset.top -= navBarHeight
-        self.transactionsTableView.tableView.contentInset = contentInset
+        headerView.resumeHeightConstraint()
+        headerContainerSearchHeight?.isActive = false
+        UIView.animate(withDuration: C.animationDuration, animations: {
+            self.view.layoutIfNeeded()
+        })
+        
         UIView.transition(from: self.searchHeaderview,
                           to: self.headerView,
                           duration: C.animationDuration,
@@ -244,6 +273,74 @@ class AccountViewController : UIViewController, Subscriber {
                           completion: { _ in
                             self.setNeedsStatusBarAppearanceUpdate()
         })
+    }
+    
+    // The rewards view is a separate UIView that is displayed in the BRD wallet,
+    // under the table view header, above the transaction cells.
+    private func addRewardsView() {
+        
+        let rewards = RewardsView()
+        view.addSubview(rewards)
+        rewardsView = rewards
+
+        //Rewards view has an intrinsic grey padding view, so it doesn't need top padding.
+        let rewardsViewTopConstraint = rewards.topAnchor.constraint(equalTo: headerView.bottomAnchor)
+        // Start the rewards view at a height of zero if animating, otherwise at the normal height.
+        let initialHeight = shouldAnimateRewardsView ? 0 : RewardsView.normalSize
+        rewardsViewHeightConstraint = rewards.heightAnchor.constraint(equalToConstant: initialHeight)
+        
+        rewards.constrain([
+            rewardsViewTopConstraint,
+            rewardsViewHeightConstraint,
+            rewards.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            rewards.trailingAnchor.constraint(equalTo: view.trailingAnchor)])
+        
+        tableViewTopConstraint?.constant = shouldAnimateRewardsView ? 0 : tableViewTopConstraintConstant(for: .normal)
+
+        view.layoutIfNeeded()
+        
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self,
+                                                          action: #selector(rewardsViewTapped))
+        rewardsView?.addGestureRecognizer(tapGestureRecognizer)
+    }
+
+    private func expandRewardsView() {
+        
+        if E.isIPhone5 {
+            headerView.collapseHeader()
+        }
+        
+        let constants = (tableViewTopConstraintConstant(for: .expanded), RewardsView.expandedSize)
+        
+        UIView.animate(withDuration: rewardsAnimationDuration, animations: { [unowned self] in
+            self.tableViewTopConstraint?.constant = constants.0
+            self.rewardsViewHeightConstraint?.constant = constants.1
+            self.view.layoutIfNeeded()
+        }, completion: { [unowned self] _ in
+            self.rewardsView?.animateIcon()
+
+            UserDefaults.shouldShowBRDRewardsAnimation = false
+
+            Timer.scheduledTimer(withTimeInterval: self.rewardsShrinkTimerDuration, repeats: false) { [unowned self] _ in
+                self.shrinkRewardsView()
+            }
+        })
+    }
+    
+    private func shrinkRewardsView() {
+        let constants = (tableViewTopConstraintConstant(for: .normal), RewardsView.normalSize)
+
+        UIView.animate(withDuration: rewardsAnimationDuration, animations: {
+            self.rewardsView?.shrinkView()
+            self.tableViewTopConstraint?.constant = constants.0
+            self.rewardsViewHeightConstraint?.constant = constants.1
+            self.view.layoutIfNeeded()
+        })
+    }
+    
+    @objc private func rewardsViewTapped() {
+        saveEvent(rewardsTappedEvent)
+        Store.trigger(name: .openPlatformUrl("/rewards"))
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -256,6 +353,12 @@ class AccountViewController : UIViewController, Subscriber {
 
     override var preferredStatusBarUpdateAnimation: UIStatusBarAnimation {
         return .slide
+    }
+
+    deinit {
+        notificationObservers.values.forEach { observer in
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
